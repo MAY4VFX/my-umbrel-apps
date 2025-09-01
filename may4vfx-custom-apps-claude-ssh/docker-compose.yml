@@ -1,11 +1,5 @@
 version: '3.8'
 services:
-  app_proxy:
-    environment:
-      # ИСПРАВЛЕНО: Указываем полное, правильное имя хоста
-      APP_HOST: may4vfx-custom-apps-claude-ssh_app_1
-      APP_PORT: 22
-
   app:
     build:
       context: .
