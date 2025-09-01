@@ -1,0 +1,13 @@
+manifestVersion: 1
+id: "claude-ssh"
+name: "Claude SSH Server"
+tagline: "SSH server with Claude Code CLI"
+version: "1.0.0"
+port: 2222
+description: >-
+  A dedicated SSH server running in a lightweight container. 
+  Includes Claude Code CLI and Git for a complete remote development environment. 
+  Connect with your favorite SSH client using a key or password.
+developer: "Custom"
+submissions:
+  - "https://github.com/your-github-username/my-umbrel-apps"
