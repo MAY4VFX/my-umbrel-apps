@@ -1,4 +1,4 @@
-manifestVersion: 1
+manifestVersion: 1.1
 id: "may4vfx-custom-apps-claude-ssh"
 name: "Claude SSH Server"
 category: "Developer Tools"
@@ -7,14 +7,16 @@ tagline: "SSH server with Claude Code CLI"
 description: >-
   A dedicated SSH server running in a lightweight container. 
   Includes Claude Code CLI and Git for a complete remote development environment. 
-  Connect with your favorite SSH client using a key or password on port 2222.
+  Connect with your favorite SSH client using a key or password.
 developer: "Custom"
 website: "https://github.com/MAY4VFX/my-umbrel-apps"
 repo: "https://github.com/MAY4VFX/my-umbrel-apps"
 support: "https://github.com/MAY4VFX/my-umbrel-apps/issues"
+# Этот порт будет открыт на вашем Umbrel для доступа к SSH
+port: 2222
 gallery: []
 path: ""
-defaultUsername: ""
-defaultPassword: ""
-releaseNotes: "Initial release."
+defaultUsername: "dev"
+defaultPassword: "Workbook^92"
+releaseNotes: "Initial release, now with correct configuration for Umbrel 1.0+."
 submission: ""

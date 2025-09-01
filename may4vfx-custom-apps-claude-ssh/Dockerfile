@@ -34,9 +34,10 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
     sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     sed -i '/^AuthorizedKeysFile/d' /etc/ssh/sshd_config && \
-    echo "AuthorizedKeysFile /home/dev/.ssh/authorized_keys" >> /etc/ssh/sshd_config && \
-    # ИЗМЕНЯЕМ ПОРТ НА 2222
-    echo "Port 2222" >> /etc/ssh/sshd_config
+    echo "AuthorizedKeysFile /home/dev/.ssh/authorized_keys" >> /etc/ssh/sshd_config
 
-# 9. Запускаем SSH-сервер
+# 9. Открываем стандартный порт SSH
+EXPOSE 22
+
+# 10. Запускаем SSH-сервер
 CMD ["/usr/sbin/sshd", "-D"]

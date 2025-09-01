@@ -1,13 +1,18 @@
 version: '3.8'
 services:
+  # Этот сервис обязателен для интеграции с Umbrel
+  app_proxy:
+    environment:
+      # Указываем полное, правильное имя хоста
+      APP_HOST: may4vfx-custom-apps-claude-ssh_app_1
+      # Указываем внутренний порт SSH
+      APP_PORT: 22
+
+  # Наш основной сервис, который ДОЛЖЕН называться 'app'
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    # Копируем конфигурацию сети и прав из pi-hole/tailscale
-    network_mode: "host"
-    cap_add:
-      - NET_ADMIN
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/projects:/home/dev/projects
