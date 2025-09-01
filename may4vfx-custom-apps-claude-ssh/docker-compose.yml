@@ -4,8 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # Используем сеть хоста
+    # Копируем конфигурацию сети и прав из pi-hole/tailscale
     network_mode: "host"
+    cap_add:
+      - NET_ADMIN
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/projects:/home/dev/projects
