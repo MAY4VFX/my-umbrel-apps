@@ -7,12 +7,11 @@ tagline: "SSH server with Claude Code CLI"
 description: >-
   A dedicated SSH server running in a lightweight container. 
   Includes Claude Code CLI and Git for a complete remote development environment. 
-  Connect with your favorite SSH client using a key or password.
+  Connect with your favorite SSH client using a key or password on port 2222.
 developer: "Custom"
 website: "https://github.com/MAY4VFX/my-umbrel-apps"
 repo: "https://github.com/MAY4VFX/my-umbrel-apps"
 support: "https://github.com/MAY4VFX/my-umbrel-apps/issues"
-port: 2222
 gallery: []
 path: ""
 defaultUsername: ""

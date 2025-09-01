@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Используем сеть хоста
+    network_mode: "host"
     restart: unless-stopped
     volumes:
       - ${APP_DATA_DIR}/projects:/home/dev/projects
