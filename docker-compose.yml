@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  claude-ssh:
+    build:
+      # Указываем Portainer, что Dockerfile лежит в папке "claude-ssh"
+      context: ./claude-ssh
+    container_name: claude-ssh-server
+    restart: unless-stopped
+    ports:
+      - "2222:22"
+    volumes:
+      # Используем абсолютный путь на хосте, понятный для Portainer
+      - /mnt/data/claude-projects:/home/dev/projects
