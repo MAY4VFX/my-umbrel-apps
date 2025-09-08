@@ -23,7 +23,7 @@ RUN adduser -D -s /bin/bash dev && \
 # 7. Настраиваем SSH-доступ по ключу
 RUN mkdir -p /home/dev/.ssh && \
     touch /home/dev/.ssh/authorized_keys && \
-    echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOQVo9kY2nO1AhWZiYw3pE5SVzalduQzfI7Up56jOIyz umbrel-tunnel" >> /home/dev/.ssh/authorized_keys && \
+    echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGBI0xFDTYDM2/ueBbtusvS8mtaEKWUDtuh782Y51ktW may@maymac01.netis.cc" >> /home/dev/.ssh/authorized_keys && \
     chown -R dev:dev /home/dev/.ssh && \
     chmod 700 /home/dev/.ssh && \
     chmod 600 /home/dev/.ssh/authorized_keys
