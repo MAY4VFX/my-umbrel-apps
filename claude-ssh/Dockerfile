@@ -7,8 +7,8 @@ RUN apk update && apk add --no-cache \
     git \
     bash
 
-# 3. Устанавливаем Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+# 3. Устанавливаем Claude Code CLI и Happy Coder
+RUN npm install -g @anthropic-ai/claude-code happy-coder
 
 # 4. Исправляем ошибку "/var/empty"
 RUN chown root:root /var/empty && chmod 711 /var/empty
