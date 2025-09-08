@@ -9,5 +9,5 @@ services:
     ports:
       - "2222:22"
     volumes:
-      # Используем постоянное хранилище Portainer (не слетает при обновлениях)
-      - /home/umbrel/umbrel/app-data/portainer/claude-projects:/home/dev/projects
+      # Путь внутри Docker-in-Docker контейнера Portainer
+      - /data/claude-projects:/home/dev/projects
