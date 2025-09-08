@@ -9,5 +9,5 @@ services:
     ports:
       - "2222:22"
     volumes:
-      # Используем абсолютный путь на хосте, понятный для Portainer
-      - /mnt/data/claude-projects:/home/dev/projects
+      # Используем постоянное хранилище Portainer (не слетает при обновлениях)
+      - /home/umbrel/umbrel/app-data/portainer/claude-projects:/home/dev/projects
