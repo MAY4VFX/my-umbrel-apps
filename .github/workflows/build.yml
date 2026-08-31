@@ -1,0 +1,56 @@
+name: build image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'images/avian-visitors/**'
+      - '.github/workflows/build.yml'
+  schedule:
+    - cron: '0 4 * * 1'   # еженедельно, чтобы подхватывать апстрим
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Установить дату сборки
+        id: date
+        run: echo "date=$(date +%F)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: images/avian-visitors
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ghcr.io/may4vfx/avian-visitors:${{ steps.date.outputs.date }}
+            ghcr.io/may4vfx/avian-visitors:latest
+
+      - name: Smoke-тест собранного образа
+        run: |
+          IMAGE=ghcr.io/may4vfx/avian-visitors:${{ steps.date.outputs.date }}
+          docker run -d --name smoke --privileged --cgroupns=host \
+            -v /sys/fs/cgroup:/sys/fs/cgroup:rw --tmpfs /run --tmpfs /run/lock \
+            -p 18080:80 "$IMAGE"
+          code=000
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/ || true)
+            [ "$code" = "200" ] && break
+            sleep 10
+          done
+          echo "HTTP: $code"
+          docker exec smoke systemctl is-active caddy
+          docker logs --tail 30 smoke
+          test "$code" = "200"
