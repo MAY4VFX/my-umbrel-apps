@@ -16,6 +16,11 @@ services:
     container_name: may4vfx-custom-apps-avian-visitors_app_1
     image: ghcr.io/may4vfx/avian-visitors:latest
     restart: unless-stopped
+    environment:
+      # Хост живёт в UTC, а станция стоит в Испании. Локальное время нужно
+      # самому BirdNET: по нему считаются рассветы-закаты, суточные графики
+      # и недельные отчёты. Хост при этом не трогаем — на нём другие сервисы.
+      TZ: Europe/Madrid
     # Внутри контейнера работает systemd — отсюда privileged и cgroup: host.
     privileged: true
     cgroup: host
@@ -34,7 +39,7 @@ services:
       - ${APP_DATA_DIR}/birdnet.conf:/home/birdnet/BirdNET-Pi/birdnet.conf
       - ${APP_DATA_DIR}/asoundrc:/home/birdnet/.asoundrc:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
-      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime:ro
     tmpfs:
       - /run
       - /run/lock
