@@ -1,6 +1,7 @@
 manifestVersion: 1.1
 id: "may4vfx-custom-apps-avian-visitors"
 name: "Avian Visitors"
+icon: "https://raw.githubusercontent.com/MAY4VFX/my-umbrel-apps/main/may4vfx-custom-apps-avian-visitors/icon.png"
 category: "Home"
 version: "1.0.0"
 tagline: "Живой коллаж птиц, которые прилетают к твоему окну"
@@ -17,7 +18,8 @@ website: "https://github.com/MAY4VFX/my-umbrel-apps"
 repo: "https://github.com/Twarner491/AvianVisitors"
 support: "https://github.com/Twarner491/AvianVisitors/issues"
 port: 8080
-gallery: []
+gallery:
+  - "https://raw.githubusercontent.com/MAY4VFX/my-umbrel-apps/main/may4vfx-custom-apps-avian-visitors/gallery-1.png"
 path: ""
 defaultUsername: ""
 defaultPassword: ""

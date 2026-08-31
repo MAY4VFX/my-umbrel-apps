@@ -15,3 +15,6 @@ Community app store для umbrelOS.
 Репозиторий публичный — здесь только шаблоны конфигов с пустыми полями.
 Токены и пароли (BirdWeather, админка веб-интерфейса) вводятся в интерфейсе
 приложения и живут только на самом устройстве, в `app-data`.
+
+Иконка и превью Avian Visitors взяты из проекта
+[AvianVisitors](https://github.com/Twarner491/AvianVisitors) (CC-BY-NC-SA-4.0).
