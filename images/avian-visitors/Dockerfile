@@ -44,6 +44,23 @@ RUN useradd -m -s /bin/bash -G audio birdnet \
 RUN printf '#!/bin/sh\necho "Etc/UTC"\n' > /usr/local/bin/timedatectl \
     && chmod +x /usr/local/bin/timedatectl
 
+# Инсталлятор идёт под `set -e` и по ходу дела перезапускает сервисы
+# (avahi-daemon, php-fpm, daemon-reload). При сборке systemd ещё не работает,
+# и любой такой вызов уронил бы всю установку. Подменяем systemctl: команды
+# запуска глушим, а enable/disable отдаём настоящему — он умеет работать
+# офлайн и именно он расставляет симлинки юнитов.
+# /usr/local/bin стоит в sudoers secure_path раньше /usr/bin, так что
+# заглушка видна и под sudo. В финальном слое она удаляется.
+RUN printf '%s\n' \
+    '#!/bin/sh' \
+    'case "$1" in' \
+    '  start|restart|reload|try-restart|reload-or-restart|daemon-reload)' \
+    '    echo "systemctl $*: пропущено при сборке образа" >&2; exit 0 ;;' \
+    '  *) exec /usr/bin/systemctl "$@" ;;' \
+    'esac' \
+    > /usr/local/bin/systemctl \
+    && chmod +x /usr/local/bin/systemctl
+
 USER birdnet
 ENV USER=birdnet
 ENV HOME=/home/birdnet
@@ -65,10 +82,12 @@ RUN sed -i \
     scripts/install_services.sh \
  && grep -nE '^  : # отключено' scripts/install_services.sh
 
-RUN bash scripts/install_birdnet.sh
+# Инсталлятор ставит пакеты, но своего `apt update` перед первым apt install
+# не делает, а списки после базового слоя вычищены — обновляем сами.
+RUN sudo apt-get update && bash scripts/install_birdnet.sh
 
 USER root
-RUN rm -f /usr/local/bin/timedatectl \
+RUN rm -f /usr/local/bin/timedatectl /usr/local/bin/systemctl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
