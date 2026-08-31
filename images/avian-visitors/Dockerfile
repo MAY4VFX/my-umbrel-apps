@@ -39,27 +39,32 @@ RUN useradd -m -s /bin/bash -G audio birdnet \
     && echo "birdnet ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/birdnet \
     && chmod 0440 /etc/sudoers.d/birdnet
 
-# Заглушка timedatectl: настоящий требует работающего systemd,
-# а инсталлятор дёргает его во время сборки.
-RUN printf '#!/bin/sh\necho "Etc/UTC"\n' > /usr/local/bin/timedatectl \
-    && chmod +x /usr/local/bin/timedatectl
-
-# Инсталлятор идёт под `set -e` и по ходу дела перезапускает сервисы
-# (avahi-daemon, php-fpm, daemon-reload). При сборке systemd ещё не работает,
-# и любой такой вызов уронил бы всю установку. Подменяем systemctl: команды
-# запуска глушим, а enable/disable отдаём настоящему — он умеет работать
-# офлайн и именно он расставляет симлинки юнитов.
-# /usr/local/bin стоит в sudoers secure_path раньше /usr/bin, так что
-# заглушка видна и под sudo. В финальном слое она удаляется.
-RUN printf '%s\n' \
-    '#!/bin/sh' \
-    'case "$1" in' \
-    '  start|restart|reload|try-restart|reload-or-restart|daemon-reload)' \
-    '    echo "systemctl $*: пропущено при сборке образа" >&2; exit 0 ;;' \
-    '  *) exec /usr/bin/systemctl "$@" ;;' \
-    'esac' \
-    > /usr/local/bin/systemctl \
-    && chmod +x /usr/local/bin/systemctl
+# Заглушки на время сборки. Кладём их вместо настоящих бинарников, а не в
+# /usr/local/bin: скрипты форка (update_caddyfile.sh, security_refresh.sh и
+# другие) жёстко задают PATH=/usr/sbin:/usr/bin:/sbin:/bin, поэтому всё, что
+# лежит в /usr/local/bin, они просто не видят.
+#
+# timedatectl: инсталлятор спрашивает таймзону, а настоящий требует systemd.
+# systemctl: инсталлятор идёт под set -e и перезапускает сервисы; хуже того,
+# install_icecast_start_guard заканчивается на `systemctl daemon-reload`, чей
+# код возврата становится результатом функции — из-за этого установка падала
+# с невнятным "Could not install the systemd live audio policy guard", хотя
+# сам файл политики создавался успешно. Команды запуска глушим, всё остальное
+# (в первую очередь enable, расставляющий симлинки юнитов) отдаём настоящему.
+# В финальном слое оба бинарника возвращаются на место.
+RUN mv /usr/bin/timedatectl /usr/bin/timedatectl.real \
+ && printf '#!/bin/sh\necho "Etc/UTC"\n' > /usr/bin/timedatectl \
+ && chmod +x /usr/bin/timedatectl \
+ && mv /usr/bin/systemctl /usr/bin/systemctl.real \
+ && printf '%s\n' \
+      '#!/bin/sh' \
+      'case "$1" in' \
+      '  start|restart|reload|try-restart|reload-or-restart|daemon-reload|daemon-reexec)' \
+      '    exit 0 ;;' \
+      '  *) exec /usr/bin/systemctl.real "$@" ;;' \
+      'esac' \
+      > /usr/bin/systemctl \
+ && chmod +x /usr/bin/systemctl
 
 USER birdnet
 ENV USER=birdnet
@@ -82,18 +87,13 @@ RUN sed -i \
     scripts/install_services.sh \
  && grep -nE '^  : # отключено' scripts/install_services.sh
 
-# ВРЕМЕННАЯ ДИАГНОСТИКА: install_icecast_start_guard возвращает голое `return 1`,
-# не сообщая, какая из проверок не прошла. Включаем трассировку внутри неё.
-RUN sed -i 's|^install_icecast_start_guard() {|install_icecast_start_guard() {\n  echo "=== ДИАГНОСТИКА guard ==="; ls -la /usr/local/sbin/avian-admin-control 2>\&1 \|\| true; stat -c "helper=%u:%g:%a:%h" /usr/local/sbin/avian-admin-control 2>\&1 \|\| true; ls -lad /etc/systemd/system/icecast2.service.d 2>\&1 \|\| true; set -x|' \
-      scripts/update_caddyfile.sh \
- && grep -n 'ДИАГНОСТИКА guard' scripts/update_caddyfile.sh
-
 # Инсталлятор ставит пакеты, но своего `apt update` перед первым apt install
 # не делает, а списки после базового слоя вычищены — обновляем сами.
 RUN sudo apt-get update && bash scripts/install_birdnet.sh
 
 USER root
-RUN rm -f /usr/local/bin/timedatectl /usr/local/bin/systemctl \
+RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
+    && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
