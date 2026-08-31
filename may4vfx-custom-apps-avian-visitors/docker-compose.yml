@@ -3,7 +3,11 @@ version: "3.7"
 services:
   app_proxy:
     environment:
-      APP_HOST: may4vfx-custom-apps-avian-visitors_app_1
+      # Имя сервиса, а не контейнера: docker compose v2 именует контейнеры
+      # через дефисы (may4vfx-custom-apps-avian-visitors-app-1), а принятая
+      # в документации Umbrel форма <app-id>_<service>_1 осталась от v1 и
+      # здесь не резолвится — прокси отдавал пустую страницу.
+      APP_HOST: app
       APP_PORT: 80
 
   app:
