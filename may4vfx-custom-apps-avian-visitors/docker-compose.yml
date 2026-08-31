@@ -16,9 +16,14 @@ services:
     devices:
       - /dev/snd:/dev/snd
     volumes:
-      # Аудио — только на внешний SSD: непрерывная запись убивает SD-карту.
-      - /mnt/data/avian/StreamData:/home/birdnet/BirdSongs/StreamData
-      - /mnt/data/avian/By_Date:/home/birdnet/BirdSongs/Extracted/By_Date
+      # Записи птиц — в именованный том. На этом хосте и /var/lib/docker,
+      # и app-data лежат на внешнем SSD, так что на SD-карту непрерывная
+      # запись аудио не идёт. Том, в отличие от bind-mount, наследует
+      # владельца из образа — иначе каталог создался бы от root и процесс
+      # BirdNET не смог бы в него писать.
+      - birdsongs:/home/birdnet/BirdSongs
+      # Конфиги приходят из папки приложения: umbrelOS кладёт их в app-data
+      # с владельцем uid 1000, который внутри контейнера и есть birdnet.
       - ${APP_DATA_DIR}/birdnet.conf:/home/birdnet/BirdNET-Pi/birdnet.conf
       - ${APP_DATA_DIR}/asoundrc:/home/birdnet/.asoundrc:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
@@ -26,3 +31,6 @@ services:
     tmpfs:
       - /run
       - /run/lock
+
+volumes:
+  birdsongs:
