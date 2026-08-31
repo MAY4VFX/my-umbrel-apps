@@ -1,0 +1,22 @@
+# Утилита: достаёт дефолтный birdnet.conf из собранного образа.
+# Запускается вручную; нужен, чтобы положить в приложение стартовый конфиг,
+# не выкачивая многогигабайтный образ на рабочую машину.
+name: dump birdnet.conf
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Достать конфиг из образа
+        run: |
+          docker run --rm --entrypoint cat ghcr.io/may4vfx/avian-visitors:latest \
+            /home/birdnet/BirdNET-Pi/birdnet.conf > birdnet.conf
+          wc -l birdnet.conf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: birdnet-conf
+          path: birdnet.conf
+          retention-days: 1
