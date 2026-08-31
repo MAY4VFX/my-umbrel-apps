@@ -252,6 +252,20 @@ CMD ["/sbin/init"]
 ставит apt-пакеты, создаёт venv и тянет колесо tflite_runtime.
 ```
 
+Инсталлятор форка рассчитан на живую малину, поэтому в контейнере пришлось обойти
+четыре несовместимости (все они уже учтены в Dockerfile в репозитории):
+
+| Причина | Как проявлялась |
+|---|---|
+| `/etc/hosts` примонтирован Docker | `sed: cannot rename /etc/hosts` |
+| `apt install` без `apt update` на вычищенных списках | `Unable to locate package debian-keyring` |
+| `systemctl restart` под `set -e` без запущенного systemd | падало на avahi-daemon и php-fpm |
+| `systemctl daemon-reload` последней командой функции | ложное `Could not install the systemd live audio policy guard`, хотя файл политики создавался |
+
+Заглушки `systemctl` и `timedatectl` подменяют сами бинарники в `/usr/bin`, а не
+кладутся в `/usr/local/bin`: пять скриптов форка жёстко задают собственный `PATH`
+без этого каталога. В финальном слое настоящие бинарники возвращаются на место.
+
 - [ ] **Шаг 3: Коммит**
 
 Образ собирается только в CI (Task 3) — локально ничего не собираем.
@@ -361,11 +375,12 @@ gh run watch "$(gh run list --workflow='build image' --limit 1 --json databaseId
 Ожидается: успешное завершение. Прогон длится около часа — это нормально, инсталлятор
 внутри образа ставит apt-пакеты и собирает venv.
 
-- [ ] **Шаг 4: [владелец] Сделать пакет GHCR публичным**
+- [x] **Шаг 4: Проверить видимость пакета GHCR**
 
-Первый пакет из Actions создаётся приватным, и Pi не сможет его скачать. Владелец
-открывает github.com/users/MAY4VFX/packages/container/avian-visitors/settings →
-Change visibility → Public.
+Ожидалось, что пакет придётся открывать вручную, но он унаследовал публичность от
+репозитория — действие владельца не потребовалось. Если бы остался приватным:
+github.com/users/MAY4VFX/packages/container/avian-visitors/settings → Change
+visibility → Public.
 
 - [ ] **Шаг 5: Проверить анонимное скачивание манифеста**
 
@@ -586,13 +601,13 @@ git push
 В веб-интерфейсе umbrelOS удалить приложение «Claude SSH Server». Оно больше не нужно,
 а его манифест исчез из стора — оставлять его сломанным незачем.
 
-- [ ] **Шаг 2: Подготовить каталоги данных на SSD**
+- [x] **Шаг 2: Каталоги данных — не требуются**
 
-```bash
-ssh umbrel@192.168.1.87 'mkdir -p /mnt/data/avian/StreamData /mnt/data/avian/By_Date && ls -ld /mnt/data/avian/*'
-```
-
-Ожидается: обе папки созданы и доступны на запись.
+Изначально планировались пути в `/mnt/data/avian`, но проверка показала, что на этом
+хосте и `~/umbrel`, и `/var/lib/docker` уже примонтированы с внешнего SSD (`/dev/sda1`,
+3 ТБ свободно). Записи птиц уехали в именованный том `birdsongs`: он лежит на том же
+SSD, наследует владельца из образа и не требует root — а создание каталогов в
+`/mnt/data` требовало sudo, которого у агента нет.
 
 - [ ] **Шаг 3: Обновить клон стора на Pi**
 
@@ -661,13 +676,14 @@ docker exec $C sh -c "ls -la /home/birdnet/BirdSongs/StreamData | head -5"'
 
 ```bash
 ssh umbrel@192.168.1.87 '
-du -sh /mnt/data/avian/* 2>/dev/null
-find /mnt/data/avian/By_Date -type f -name "*.wav" 2>/dev/null | head -3
-df -h / | tail -1'
+C=may4vfx-custom-apps-avian-visitors_app_1
+docker exec $C sh -c "du -sh /home/birdnet/BirdSongs/*; find /home/birdnet/BirdSongs/Extracted/By_Date -name \"*.wav\" | head -3"
+df -h / /var/lib/docker | tail -2'
 ```
 
-Ожидается: файлы детекций в `/mnt/data/avian/By_Date`, а занятость `/` не растёт —
-подтверждение, что на SD-карту аудио не пишется.
+Ожидается: файлы детекций в `Extracted/By_Date`, `/var/lib/docker` на `/dev/sda1`
+(внешний SSD), а занятость `/` не растёт — подтверждение, что на SD-карту аудио
+не пишется.
 
 - [ ] **Шаг 9: Проверить, что детекции уходят в BirdWeather**
 
