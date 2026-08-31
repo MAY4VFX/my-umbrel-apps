@@ -54,6 +54,17 @@ RUN git clone --depth=1 -b avian-visitors \
     https://github.com/Twarner491/AvianVisitors.git BirdNET-Pi
 
 WORKDIR /home/birdnet/BirdNET-Pi
+
+# В контейнере /etc/hosts примонтирован демоном Docker, поэтому sed -i на нём
+# падает с "Device or resource busy", а hostname задаёт Docker, а не hostnamectl.
+# Обе функции нужны инсталлятору только ради внешних URL (BIRDNETPI_URL и
+# компания), которые у нас пустые, — глушим их перед запуском.
+RUN sed -i \
+    -e 's|^  set_hostname$|  : # отключено: hostname задаёт Docker|' \
+    -e 's|^  update_etc_hosts$|  : # отключено: /etc/hosts примонтирован Docker|' \
+    scripts/install_services.sh \
+ && grep -nE '^  : # отключено' scripts/install_services.sh
+
 RUN bash scripts/install_birdnet.sh
 
 USER root

@@ -1,0 +1,16 @@
+# Микрофон читают одновременно запись и Icecast-стрим, а hw: пускает
+# только одного читателя — поэтому доступ шарится через dsnoop.
+# Карта адресуется по имени (KT USB Audio), а не по индексу: индекс
+# съезжает после перезагрузки или перетыкания USB.
+pcm.usb_mic_raw {
+    type dsnoop
+    ipc_key 1234
+    slave {
+        pcm "hw:CARD=Audio,DEV=0"
+    }
+}
+
+pcm.usb_mic {
+    type plug
+    slave.pcm "usb_mic_raw"
+}

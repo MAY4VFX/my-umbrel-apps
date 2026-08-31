@@ -38,6 +38,16 @@ jobs:
             ghcr.io/may4vfx/avian-visitors:${{ steps.date.outputs.date }}
             ghcr.io/may4vfx/avian-visitors:latest
 
+      # Каждая сборка кладёт в GHCR новый образ на несколько гигабайт.
+      # Держим только две последние версии, чтобы не копить хлам.
+      - name: Убрать старые версии образа
+        uses: actions/delete-package-versions@v5
+        continue-on-error: true
+        with:
+          package-name: 'avian-visitors'
+          package-type: 'container'
+          min-versions-to-keep: 2
+
       - name: Smoke-тест собранного образа
         run: |
           IMAGE=ghcr.io/may4vfx/avian-visitors:${{ steps.date.outputs.date }}
