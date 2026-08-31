@@ -61,6 +61,19 @@ RUN printf '%s\n' \
     > /usr/local/bin/systemctl \
     && chmod +x /usr/local/bin/systemctl
 
+# Диагностика: если syncfs на overlayfs не работает, это видно в логе сборки.
+RUN sync -f /etc/hostname >/dev/null 2>&1 \
+    && echo "sync -f: работает" \
+    || echo "sync -f: не работает в buildkit — работает заглушка ниже"
+
+# Установщик политики live-audio пишет systemd drop-in и вызывает sync -f для
+# надёжности записи. На overlayfs внутри сборки syncfs отдаёт ошибку, функция
+# глушит вывод и просто возвращает 1 — вся установка падала с невнятным
+# "Could not install the systemd live audio policy guard". Долговечность слоёв
+# образа обеспечивает сам Docker, так что при сборке sync не нужен.
+RUN printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/sync \
+    && chmod +x /usr/local/bin/sync
+
 USER birdnet
 ENV USER=birdnet
 ENV HOME=/home/birdnet
@@ -87,7 +100,7 @@ RUN sed -i \
 RUN sudo apt-get update && bash scripts/install_birdnet.sh
 
 USER root
-RUN rm -f /usr/local/bin/timedatectl /usr/local/bin/systemctl \
+RUN rm -f /usr/local/bin/timedatectl /usr/local/bin/systemctl /usr/local/bin/sync \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
