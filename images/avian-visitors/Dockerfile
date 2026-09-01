@@ -91,21 +91,40 @@ RUN sed -i \
 # не делает, а списки после базового слоя вычищены — обновляем сами.
 RUN sudo apt-get update && bash scripts/install_birdnet.sh
 
-# Штатный бандл иллюстраций — птицы западных США (333 вида). Для европейских
-# видов картинок в нём нет, и коллаж рисует заглушку с яйцами вместо сороки
-# и щегла. Подкладываем иберийский набор от сообщества: 440 видов, Мадрид и
-# Кастилия-Ла-Манча покрыты полностью. Маски и размеры берём готовыми оттуда
-# же — пересчитывать build_masks.py не требуется.
-# Список наборов по регионам: illustration-bundles.md в апстриме.
-RUN git clone --depth=1 -b iberia-illustrations --filter=blob:none --sparse \
-      https://github.com/RoqueAlonso/AvianVisitors.git /tmp/iberia \
- && git -C /tmp/iberia sparse-checkout set avian/assets avian/frontend \
- && cp -a /tmp/iberia/avian/assets/. /home/birdnet/BirdNET-Pi/avian/assets/ \
- && cp -f /tmp/iberia/avian/frontend/masks.json \
-          /tmp/iberia/avian/frontend/dims.json \
-          /home/birdnet/BirdNET-Pi/avian/frontend/ \
- && ls /home/birdnet/BirdNET-Pi/avian/assets/illustrations | wc -l \
- && rm -rf /tmp/iberia
+# Штатный бандл иллюстраций — птицы западных США (333 вида), поэтому европейские
+# птицы рисовались заглушкой с яйцами. Станция ездит по Европе, так что кладём
+# поверх все европейские наборы из illustration-bundles.md апстрима.
+# Порядок важен: при совпадении вида побеждает скопированный последним, поэтому
+# иберийский идёт в конце — он профильный для текущей стоянки.
+RUN set -eux; \
+    for spec in \
+      "bassrelic/AvianVisitors-German-Fork add_german_species avian/assets/illustrations" \
+      "jonnywright/AvianAssets main illustrations" \
+      "theskyisthelimit/AvianVisitors europe-illustrations avian/assets/illustrations" \
+      "lloydalexporter/AvianAssets_GB-ENG main illustrations" \
+      "RoqueAlonso/AvianVisitors iberia-illustrations avian/assets/illustrations" \
+    ; do \
+      set -- $spec; \
+      git clone --depth=1 -b "$2" --filter=blob:none --sparse \
+        "https://github.com/$1.git" /tmp/bundle; \
+      git -C /tmp/bundle sparse-checkout set "$3"; \
+      cp -a "/tmp/bundle/$3/." /home/birdnet/BirdNET-Pi/avian/assets/illustrations/; \
+      rm -rf /tmp/bundle; \
+    done; \
+    ls /home/birdnet/BirdNET-Pi/avian/assets/illustrations | wc -l
+
+# Маски силуэтов не переносятся из наборов, а пересобираются по всей библиотеке:
+# у английского набора их вообще нет, а склеивать чужие таблицы руками рискованно.
+# Скрипт читает каждую иллюстрацию и пишет dims.json + masks.json целиком.
+# Версии в apt.js бампаются, иначе браузер отдаст старые таблицы из кэша.
+RUN cd /home/birdnet/BirdNET-Pi/avian/scripts \
+ && /home/birdnet/BirdNET-Pi/birdnet/bin/python3 build_masks.py \
+ && sed -i \
+      -e "s/var TABLE_VERSION = 'r13'/var TABLE_VERSION = 'r13-eu'/" \
+      -e "s/var SKETCH_VERSION = 'r12'/var SKETCH_VERSION = 'r12-eu'/" \
+      -e "s/var IMG_VERSION = 'r12'/var IMG_VERSION = 'r12-eu'/" \
+      ../frontend/apt.js \
+ && grep -E "var (TABLE|SKETCH|IMG)_VERSION" ../frontend/apt.js
 
 # Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
 # настройки языка для них нет, хотя названия видов уже переведены через
