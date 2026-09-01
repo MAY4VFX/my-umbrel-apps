@@ -1,104 +1,171 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Живой сигнал</title>
+<title>Живой сигнал · Avian Visitors</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  :root{color-scheme:dark}
-  body{margin:0;background:#15161a;color:#c9c7c1;font:13px/1.5 ui-monospace,SFMono-Regular,monospace;
-       display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;box-sizing:border-box}
-  h1{font-size:15px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;opacity:.6;margin:0}
-  canvas{width:100%;max-width:1100px;height:420px;border-radius:10px;background:#0b0c0e;
-         box-shadow:0 10px 40px #0009;display:block}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
-  button{background:#23252b;color:#d8d6d0;border:1px solid #34373f;border-radius:7px;
-         padding:8px 16px;font:inherit;cursor:pointer}
-  button:hover{background:#2b2e35}
-  .s{opacity:.55}
-  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4b4e55;margin-right:7px}
-  .dot.on{background:#6fcf72;animation:p 2s infinite}
-  @keyframes p{50%{opacity:.3}}
-  .hint{max-width:1100px;opacity:.4;font-size:12px;text-align:center}
+  @font-face{font-family:'Bebas';src:url('./fonts/stamp/bebas-0.woff2') format('woff2');font-display:swap}
+  @font-face{font-family:'SpaceG';src:url('./fonts/stamp/spacegrotesk-0.woff2') format('woff2');font-display:swap}
+  @font-face{font-family:'SpaceM';src:url('./fonts/stamp/spacemono-0.woff2') format('woff2');font-display:swap}
+
+  :root{
+    --ink:#1b1712; --panel:#221d17; --line:#332b22;
+    --cream:#f4ecd6; --faint:#b6ae9b; --gold:#e7ac10; --band:#d3342a; --green:#6fcf72;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ink);color:var(--cream);
+       font:15px/1.55 'SpaceG',system-ui,sans-serif;padding:22px;display:flex;
+       flex-direction:column;gap:16px;align-items:center;min-height:100vh}
+  header{width:100%;max-width:1180px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h1{font:400 30px/1 'Bebas',sans-serif;letter-spacing:.06em;margin:0}
+  .sub{font-family:'SpaceM',monospace;font-size:11px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+  .wrap{width:100%;max-width:1180px;display:grid;grid-template-columns:1fr 260px;gap:16px}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}}
+  .board{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  canvas{width:100%;height:400px;display:block;border-radius:8px;background:#100d0a}
+  .bar{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+  button{font:400 15px/1 'Bebas',sans-serif;letter-spacing:.06em;background:transparent;
+         color:var(--cream);border:1px solid var(--line);border-radius:7px;padding:9px 16px;cursor:pointer}
+  button:hover{border-color:var(--gold);color:var(--gold)}
+  button.on{background:var(--gold);border-color:var(--gold);color:#1b1712}
+  .stat{font-family:'SpaceM',monospace;font-size:11px;color:var(--faint);margin-left:auto}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4b453c;margin-right:7px}
+  .dot.on{background:var(--green);animation:pulse 2s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  aside{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;
+        display:flex;flex-direction:column;gap:10px;align-self:start}
+  aside h2{font:400 17px/1 'Bebas',sans-serif;letter-spacing:.08em;margin:0 0 2px;color:var(--faint)}
+  .card{border-left:2px solid var(--gold);padding:6px 0 6px 10px}
+  .card .n{font:400 19px/1.15 'Bebas',sans-serif;letter-spacing:.03em}
+  .card .m{font-family:'SpaceM',monospace;font-size:10.5px;color:var(--faint);margin-top:3px}
+  .card.fresh{border-color:var(--band)}
+  .empty{font-family:'SpaceM',monospace;font-size:11px;color:var(--faint)}
+  .hint{max-width:1180px;font-family:'SpaceM',monospace;font-size:11px;color:#6f665a;text-align:center}
 </style>
 
-<h1>Avian Visitors · живой сигнал</h1>
-<canvas id="c" width="1100" height="420"></canvas>
-<div class="row">
-  <button id="go">Включить</button>
-  <button id="snd">Звук: выкл</button>
-  <span class="s"><span class="dot" id="dot"></span><span id="st">не подключено</span></span>
+<header>
+  <h1>Живой сигнал</h1>
+  <span class="sub" id="site">avian visitors</span>
+</header>
+
+<div class="wrap">
+  <div class="board">
+    <canvas id="c" width="1180" height="400"></canvas>
+    <div class="bar">
+      <button id="go">Включить</button>
+      <button id="snd">Звук</button>
+      <span class="stat"><span class="dot" id="dot"></span><span id="st">не подключено</span></span>
+    </div>
+  </div>
+  <aside>
+    <h2>Распознано</h2>
+    <div id="feed"><div class="empty">пока тихо</div></div>
+  </aside>
 </div>
-<div class="hint">Спектрограмма рисуется браузером прямо из потока микрофона. Пение птиц — яркие штрихи в верхней половине; ровный фон снизу это шум ветра и техники.</div>
+
+<div class="hint">Метки на спектрограмме — моменты, когда станция засчитала птицу. Анализ идёт кусками по 15 секунд, поэтому метка появляется с задержкой и ставится на то место, где птица прозвучала.</div>
 
 <script>
-var cv = document.getElementById('c'), g = cv.getContext('2d');
-var st = document.getElementById('st'), dot = document.getElementById('dot');
-var ctx, analyser, audio, gain, data, running = false, muted = true;
+var cv=document.getElementById('c'), g=cv.getContext('2d');
+var st=document.getElementById('st'), dot=document.getElementById('dot'), feed=document.getElementById('feed');
+var ctx,analyser,audio,gain,data,running=false,muted=true;
+var MAX_HZ=12000, pxPerSec=0, frames=0, tMark=0, skew=0, seen={}, cards=[];
 
-var MAX_HZ = 12000;   // птицы поют примерно до 10 кГц, выше только шум
+// Часы станции могут отличаться от браузерных — синхронизируемся по ответу API.
+function stationNow(){ return Date.now() + skew; }
 
 function paint(){
-  if (!running) return;
+  if(!running) return;
   requestAnimationFrame(paint);
   analyser.getByteFrequencyData(data);
-  // сдвигаем полотно влево и дорисовываем свежий столбец справа
-  var img = g.getImageData(1, 0, cv.width - 1, cv.height);
-  g.putImageData(img, 0, 0);
-  var nyq = ctx.sampleRate / 2;
-  var bins = Math.min(data.length, Math.round(MAX_HZ / nyq * data.length));
-  for (var y = 0; y < cv.height; y++){
-    var i = Math.round((1 - y / cv.height) * (bins - 1));
-    var v = data[i] / 255;
-    // тёплая палитра: тишина тёмная, сигнал уходит в жёлтый
-    var r = Math.round(255 * Math.min(1, v * 1.6));
-    var gr = Math.round(215 * Math.pow(v, 1.5));
-    var b = Math.round(90 * Math.pow(v, 3));
-    g.fillStyle = 'rgb(' + r + ',' + gr + ',' + b + ')';
-    g.fillRect(cv.width - 1, y, 1, 1);
+  var img=g.getImageData(1,0,cv.width-1,cv.height);
+  g.putImageData(img,0,0);
+  var nyq=ctx.sampleRate/2, bins=Math.min(data.length,Math.round(MAX_HZ/nyq*data.length));
+  for(var y=0;y<cv.height;y++){
+    var i=Math.round((1-y/cv.height)*(bins-1)), v=data[i]/255;
+    g.fillStyle='rgb('+Math.round(244*Math.min(1,v*1.7))+','+Math.round(200*Math.pow(v,1.4))+','+Math.round(70*Math.pow(v,2.6))+')';
+    g.fillRect(cv.width-1,y,1,1);
   }
+  frames++;
+  var dt=(performance.now()-tMark)/1000;
+  if(dt>=2){ pxPerSec=frames/dt; frames=0; tMark=performance.now(); }
+}
+
+// Метка едет вместе с полотном, потому что нарисована прямо на нём.
+function mark(name,conf,ageSec){
+  if(!pxPerSec) return;
+  var x=Math.round(cv.width-ageSec*pxPerSec);
+  if(x<60||x>cv.width) return;
+  g.strokeStyle='rgba(231,172,16,.85)'; g.lineWidth=1;
+  g.beginPath(); g.moveTo(x+.5,0); g.lineTo(x+.5,cv.height); g.stroke();
+  g.font="15px 'Bebas',sans-serif"; g.textAlign='right';
+  g.fillStyle='rgba(27,23,18,.75)';
+  var w=g.measureText(name).width+12;
+  g.fillRect(x-w,6,w,20);
+  g.fillStyle='#e7ac10'; g.fillText(name,x-6,21);
+  g.font="10px 'SpaceM',monospace"; g.fillStyle='rgba(244,236,214,.6)';
+  g.fillText(Math.round(conf*100)+'%',x-6,36);
+}
+
+function render(){
+  if(!cards.length){ feed.innerHTML='<div class="empty">пока тихо</div>'; return; }
+  feed.innerHTML=cards.slice(0,7).map(function(c,i){
+    var ago=Math.round((stationNow()-c.at)/1000);
+    var when=ago<60?ago+' сек назад':Math.round(ago/60)+' мин назад';
+    return '<div class="card'+(i===0&&ago<90?' fresh':'')+'"><div class="n">'+c.name+
+           '</div><div class="m">'+Math.round(c.conf*100)+'% · '+when+'</div></div>';
+  }).join('');
+}
+
+async function poll(){
+  try{
+    var r=await fetch('./avian/api/birdnet-api.php?action=recent&hours=1',{credentials:'same-origin'});
+    var j=await r.json();
+    if(j.as_of) skew=new Date(j.as_of).getTime()-Date.now();
+    document.getElementById('site').textContent=(j.site_name||'avian visitors').toLowerCase();
+    (j.species||[]).forEach(function(s){
+      var at=new Date(s.last_seen.replace(' ','T')+(j.as_of?j.as_of.slice(-6):'')).getTime();
+      if(seen[s.sci]===at) return;
+      var isNew=seen[s.sci]!==undefined;
+      seen[s.sci]=at;
+      cards.unshift({name:s.com,conf:s.best_conf,at:at});
+      if(isNew&&running) mark(s.com,s.best_conf,(stationNow()-at)/1000);
+    });
+    cards.sort(function(a,b){return b.at-a.at});
+    render();
+  }catch(e){}
 }
 
 async function start(){
-  try {
-    st.textContent = 'подключаюсь…';
-    audio = new Audio('http://' + location.hostname + ':8090/stream');
-    audio.crossOrigin = 'anonymous';
-    ctx = new (window.AudioContext || window.webkitAudioContext)();
-    var src = ctx.createMediaElementSource(audio);
-    analyser = ctx.createAnalyser();
-    analyser.fftSize = 4096;
-    analyser.smoothingTimeConstant = 0.55;
-    gain = ctx.createGain();
-    gain.gain.value = 0;              // анализ идёт всегда, звук отдельно
-    src.connect(analyser);
-    analyser.connect(gain);
-    gain.connect(ctx.destination);
-    await audio.play();
-    await ctx.resume();
-    data = new Uint8Array(analyser.frequencyBinCount);
-    running = true;
-    dot.classList.add('on');
-    st.textContent = 'слушаю микрофон';
-    document.getElementById('go').textContent = 'Остановить';
+  try{
+    st.textContent='подключаюсь…';
+    audio=new Audio('http://'+location.hostname+':8090/stream');
+    audio.crossOrigin='anonymous';
+    ctx=new (window.AudioContext||window.webkitAudioContext)();
+    var src=ctx.createMediaElementSource(audio);
+    analyser=ctx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=.55;
+    gain=ctx.createGain(); gain.gain.value=0;
+    src.connect(analyser); analyser.connect(gain); gain.connect(ctx.destination);
+    await audio.play(); await ctx.resume();
+    data=new Uint8Array(analyser.frequencyBinCount);
+    running=true; tMark=performance.now(); frames=0;
+    dot.classList.add('on'); st.textContent='слушаю микрофон';
+    document.getElementById('go').textContent='Остановить';
     paint();
-  } catch (e) {
-    st.textContent = 'не удалось: ' + e.message;
-  }
+  }catch(e){ st.textContent='не удалось: '+e.message; }
 }
-
 function stop(){
-  running = false;
-  if (audio) { audio.pause(); audio.src = ''; }
-  if (ctx) ctx.close();
-  dot.classList.remove('on');
-  st.textContent = 'остановлено';
-  document.getElementById('go').textContent = 'Включить';
+  running=false;
+  if(audio){audio.pause();audio.src='';}
+  if(ctx)ctx.close();
+  dot.classList.remove('on'); st.textContent='остановлено';
+  document.getElementById('go').textContent='Включить';
 }
-
-document.getElementById('go').onclick = function(){ running ? stop() : start(); };
-document.getElementById('snd').onclick = function(){
-  if (!gain) return;
-  muted = !muted;
-  gain.gain.value = muted ? 0 : 1;
-  this.textContent = 'Звук: ' + (muted ? 'выкл' : 'вкл');
+document.getElementById('go').onclick=function(){ running?stop():start(); };
+document.getElementById('snd').onclick=function(){
+  if(!gain)return;
+  muted=!muted; gain.gain.value=muted?0:1;
+  this.classList.toggle('on',!muted);
 };
+poll(); setInterval(poll,5000); setInterval(render,10000);
 </script>
