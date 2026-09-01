@@ -97,6 +97,20 @@ RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Юнит Caddy из пакета Debian просит PrivateTmp и ProtectSystem, а systemd
+# внутри контейнера не может построить mount namespace (/tmp не отдельная точка
+# монтирования) — ExecReload падал с 226/NAMESPACE. Ломалась смена админского
+# пароля: она перечитывает конфигурацию Caddy. Изоляция здесь избыточна,
+# контейнер сам является песочницей. Имя с zzz — чтобы применялось последним,
+# после override.conf, который кладёт инсталлятор.
+RUN mkdir -p /etc/systemd/system/caddy.service.d \
+ && printf '%s\n' \
+      '[Service]' \
+      'PrivateTmp=no' \
+      'ProtectSystem=no' \
+      'ProtectHome=no' \
+      > /etc/systemd/system/caddy.service.d/zzz-container.conf
+
 EXPOSE 80 8081
 
 STOPSIGNAL SIGRTMIN+3
