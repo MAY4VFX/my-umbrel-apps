@@ -91,6 +91,22 @@ RUN sed -i \
 # не делает, а списки после базового слоя вычищены — обновляем сами.
 RUN sudo apt-get update && bash scripts/install_birdnet.sh
 
+# Штатный бандл иллюстраций — птицы западных США (333 вида). Для европейских
+# видов картинок в нём нет, и коллаж рисует заглушку с яйцами вместо сороки
+# и щегла. Подкладываем иберийский набор от сообщества: 440 видов, Мадрид и
+# Кастилия-Ла-Манча покрыты полностью. Маски и размеры берём готовыми оттуда
+# же — пересчитывать build_masks.py не требуется.
+# Список наборов по регионам: illustration-bundles.md в апстриме.
+RUN git clone --depth=1 -b iberia-illustrations --filter=blob:none --sparse \
+      https://github.com/RoqueAlonso/AvianVisitors.git /tmp/iberia \
+ && git -C /tmp/iberia sparse-checkout set avian/assets avian/frontend \
+ && cp -a /tmp/iberia/avian/assets/. /home/birdnet/BirdNET-Pi/avian/assets/ \
+ && cp -f /tmp/iberia/avian/frontend/masks.json \
+          /tmp/iberia/avian/frontend/dims.json \
+          /home/birdnet/BirdNET-Pi/avian/frontend/ \
+ && ls /home/birdnet/BirdNET-Pi/avian/assets/illustrations | wc -l \
+ && rm -rf /tmp/iberia
+
 USER root
 RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
     && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
