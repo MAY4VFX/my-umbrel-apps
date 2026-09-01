@@ -3,16 +3,13 @@
 <meta charset="utf-8">
 <title>Живой сигнал</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<link rel="icon" href="./favicon.png">
+<link rel="icon" href="/favicon.png">
 <script>
-  // Тема выбирается в основном интерфейсе — следуем ей, чтобы вкладка
-  // не выбивалась из остального приложения.
   (function(){
-    var pref = null;
-    try { pref = localStorage.getItem('bird:theme:v2') || localStorage.getItem('bird:theme'); } catch(e){}
-    var dark = pref === 'dark' || (pref !== 'light' &&
-      window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    var pref=null;
+    try{ pref=localStorage.getItem('bird:theme:v2')||localStorage.getItem('bird:theme'); }catch(e){}
+    var dark=pref==='dark'||(pref!=='light'&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme',dark?'dark':'light');
   })();
 </script>
 <style>
@@ -21,9 +18,9 @@
     --paper:#fcfcfb; --paper-2:#f3f2ee; --paper-3:#e8e6df;
     --ink:#1a1612; --ink-2:#4a3f31; --ink-soft:#908576;
     --pill:#fcfcfb; --hairline:rgba(26,22,18,.14);
-    --edge-lg:inset 0 0 0 1px rgba(255,255,255,.6),0 0 0 1px rgba(26,22,18,.06),0 8px 28px rgba(26,22,18,.06);
     --recess:inset 0 1px 2px rgba(26,22,18,.06),inset 0 0 0 1px rgba(26,22,18,.04);
     --raised:inset 0 0 0 1px rgba(255,255,255,.8),0 0 0 1px rgba(26,22,18,.05),0 1px 2px rgba(26,22,18,.07);
+    --edge-lg:inset 0 0 0 1px rgba(255,255,255,.6),0 0 0 1px rgba(26,22,18,.06),0 8px 28px rgba(26,22,18,.06);
     --scope:#0e0f12; --mark:#e7ac10;
     --ease:cubic-bezier(.22,1,.36,1);
   }
@@ -31,10 +28,10 @@
     color-scheme:dark;
     --paper:#17181c; --paper-2:#212329; --paper-3:#2c2f36;
     --ink:#ece8e1; --ink-2:#b7afa2; --ink-soft:#837c70;
-    --pill:#2c2f36; --hairline:rgba(236,232,225,.14);
-    --edge-lg:inset 0 0 0 1px rgba(255,255,255,.06),0 0 0 1px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45);
+    --pill:#2c2f36; --hairline:rgba(236,232,225,.12);
     --recess:inset 0 1px 2px rgba(0,0,0,.4),inset 0 0 0 1px rgba(255,255,255,.04);
     --raised:inset 0 0 0 1px rgba(255,255,255,.08),0 0 0 1px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.4);
+    --edge-lg:inset 0 0 0 1px rgba(255,255,255,.06),0 0 0 1px rgba(0,0,0,.4),0 10px 34px rgba(0,0,0,.45);
     --scope:#0b0c0e;
   }
   *{box-sizing:border-box}
@@ -42,84 +39,79 @@
   body{
     margin:0;background:var(--paper);color:var(--ink);
     font:400 15px/1.5 ui-sans-serif,-apple-system,system-ui,sans-serif;
-    display:flex;flex-direction:column;
-    padding:clamp(16px,3vw,34px) clamp(14px,3vw,34px) 96px;
+    display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+    gap:clamp(12px,2vh,22px);
+    padding:clamp(18px,3.4vh,38px) clamp(16px,4vw,40px) 104px;
   }
-  header{text-align:center;flex:0 0 auto;padding-bottom:clamp(12px,2vw,20px)}
-  .pre{
-    font:italic 400 clamp(13px,1.4vw,18px)/1.22 ui-serif,"Iowan Old Style",Georgia,serif;
-    color:var(--ink-2);letter-spacing:.06em;margin:0 0 4px;
-  }
-  h1{
-    font:400 clamp(26px,4.4vw,44px)/1.04 ui-serif,"Iowan Old Style",Georgia,serif;
-    letter-spacing:-.02em;margin:0;
-  }
-  main{flex:1 1 auto;display:grid;gap:14px;grid-template-columns:minmax(0,1fr) 250px;align-items:start;
-       max-width:1240px;width:100%;margin:0 auto}
-  @media (max-width:880px){main{grid-template-columns:minmax(0,1fr)}}
+  header{text-align:center}
+  .pre{font:italic 400 clamp(12px,1.3vw,16px)/1.2 ui-serif,"Iowan Old Style",Georgia,serif;
+       color:var(--ink-2);letter-spacing:.06em;margin:0 0 3px}
+  h1{font:400 clamp(24px,3.6vw,38px)/1.04 ui-serif,"Iowan Old Style",Georgia,serif;
+     letter-spacing:-.02em;margin:0}
 
-  .scope{position:relative;border-radius:16px;overflow:hidden;background:var(--scope);box-shadow:var(--edge-lg)}
-  canvas{display:block;width:100%;height:min(52vh,440px)}
+  main{width:100%;max-width:1180px;margin:0 auto;display:grid;
+       grid-template-rows:minmax(0,1fr) auto;gap:14px;min-height:0}
 
-  /* Плавающая панель поверх полотна — материал, а не полоса, съедающая высоту */
-  .chrome{
-    position:absolute;left:12px;right:12px;top:12px;display:flex;align-items:center;gap:10px;
-    pointer-events:none;
-  }
-  .chip{
-    pointer-events:auto;display:inline-flex;align-items:center;gap:8px;
-    background:rgba(20,21,25,.55);backdrop-filter:blur(18px) saturate(150%);
-    -webkit-backdrop-filter:blur(18px) saturate(150%);
-    color:#ece8e1;border-radius:999px;padding:8px 14px;
-    font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;
-    border:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
-    transition:transform 120ms var(--ease),background 200ms ease;
-  }
+  .scope{position:relative;border-radius:18px;overflow:hidden;background:var(--scope);
+         box-shadow:var(--edge-lg);min-height:0}
+  canvas{display:block;width:100%;height:100%}
+  .chrome{position:absolute;left:14px;right:14px;top:14px;display:flex;align-items:center;gap:10px;
+          pointer-events:none}
+  .chip{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;
+        background:rgba(18,19,23,.5);backdrop-filter:blur(20px) saturate(160%);
+        -webkit-backdrop-filter:blur(20px) saturate(160%);color:#ece8e1;border:0;
+        border-radius:999px;padding:8px 14px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);
+        font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;
+        transition:transform 120ms var(--ease),background 220ms ease,color 220ms ease}
   button.chip{cursor:pointer}
   button.chip:active{transform:scale(.96)}
-  button.chip[aria-pressed="true"]{background:rgba(236,232,225,.9);color:#17181c;
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
-  .chip .dot{width:6px;height:6px;border-radius:50%;background:#7c7468;flex:0 0 auto}
-  .chip .dot.on{background:#6fcf72;animation:breathe 2.4s ease-in-out infinite}
+  button.chip[aria-pressed="true"]{background:rgba(236,232,225,.92);color:#17181c;
+        box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+  .dot{width:6px;height:6px;border-radius:50%;background:#7c7468;flex:0 0 auto}
+  .dot.on{background:#6fcf72;animation:breathe 2.6s ease-in-out infinite}
   @keyframes breathe{50%{opacity:.35}}
   .spacer{flex:1 1 auto}
 
-  aside{background:var(--paper-2);border-radius:16px;box-shadow:var(--recess);padding:14px;
-        display:flex;flex-direction:column;gap:2px}
-  aside h2{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;
-           color:var(--ink-soft);margin:2px 0 10px}
-  .card{padding:9px 0;border-top:1px solid var(--hairline);
-        animation:rise 420ms var(--ease) both}
-  .card:first-of-type{border-top:0}
-  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .card .n{font:400 17px/1.15 ui-serif,"Iowan Old Style",Georgia,serif;letter-spacing:-.01em}
-  .card .m{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink-soft);margin-top:5px}
-  .empty{font:400 10px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink-soft)}
+  /* Лента распознаваний: карточки едут влево ровно с той же скоростью,
+     что и звук на спектрограмме, поэтому видно, к какому месту относится метка */
+  .feed{height:96px;position:relative;overflow:hidden;border-radius:14px;
+        background:var(--paper-2);box-shadow:var(--recess)}
+  .feed .lbl{position:absolute;left:14px;top:11px;z-index:2;
+        font:400 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.22em;text-transform:uppercase;
+        color:var(--ink-soft)}
+  .feed .empty{position:absolute;inset:0;display:grid;place-items:center;
+        font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.18em;color:var(--ink-soft)}
+  .hit{position:absolute;bottom:12px;transform:translateX(-100%);
+       display:flex;flex-direction:column;gap:3px;text-decoration:none;color:inherit;
+       padding:7px 12px;border-radius:11px;background:var(--paper);box-shadow:var(--raised);
+       white-space:nowrap;transition:transform 140ms var(--ease),box-shadow 200ms ease}
+  .hit:hover{box-shadow:var(--edge-lg)}
+  .hit:active{transform:translateX(-100%) scale(.97)}
+  .hit .n{font:400 15px/1.1 ui-serif,"Iowan Old Style",Georgia,serif;letter-spacing:-.01em}
+  .hit .m{font:400 9.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:var(--ink-soft)}
+  .hit.fresh{animation:pop 520ms var(--ease) both}
+  @keyframes pop{from{opacity:0;transform:translateX(-100%) translateY(10px) scale(.96)}
+                 to{opacity:1;transform:translateX(-100%)}}
+  .tick{position:absolute;top:0;bottom:0;width:1px;background:var(--mark);opacity:.5}
 
-  /* Нижний переключатель — тот же, что в основном интерфейсе */
-  .slider{
-    position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
-    display:flex;align-items:center;padding:4px;z-index:30;min-height:40px;
-    background:var(--paper-2);border-radius:999px;box-shadow:var(--recess);
-  }
-  .slider a,.slider button{
-    background:transparent;border:0;color:var(--ink-soft);text-decoration:none;
-    font:10px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;
-    padding:11px 22px;border-radius:999px;cursor:pointer;position:relative;z-index:1;
-    transition:color 200ms ease;
-  }
+  .slider{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+          display:flex;align-items:center;padding:4px;z-index:30;min-height:40px;
+          background:var(--paper-2);border-radius:999px;box-shadow:var(--recess)}
+  .slider a{background:transparent;border:0;color:var(--ink-soft);text-decoration:none;
+        font:10px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-transform:uppercase;
+        padding:11px 22px;border-radius:999px;position:relative;z-index:1;transition:color 200ms ease}
   .slider a:hover{color:var(--ink)}
   .slider [aria-current="page"]{color:var(--ink)}
   .seg-pill{position:absolute;top:4px;bottom:4px;left:0;background:var(--pill);border-radius:999px;
-            box-shadow:var(--raised);pointer-events:none;z-index:0;
-            transition:transform 320ms cubic-bezier(.7,.05,.2,1),width 320ms cubic-bezier(.7,.05,.2,1)}
+        box-shadow:var(--raised);pointer-events:none;z-index:0;
+        transition:transform 320ms cubic-bezier(.7,.05,.2,1),width 320ms cubic-bezier(.7,.05,.2,1)}
 
+  @media (max-width:700px){ .feed{height:88px} }
   @media (prefers-reduced-motion:reduce){
-    *{animation-duration:1ms !important;animation-iteration-count:1 !important;
-      transition-duration:120ms !important}
+    *{animation-duration:1ms !important;animation-iteration-count:1 !important;transition-duration:120ms !important}
   }
   @media (prefers-reduced-transparency:reduce){
-    .chip{background:rgba(20,21,25,.92);backdrop-filter:none;-webkit-backdrop-filter:none}
+    .chip{background:rgba(18,19,23,.94);backdrop-filter:none;-webkit-backdrop-filter:none}
   }
 </style>
 
@@ -130,7 +122,7 @@
 
 <main>
   <div class="scope">
-    <canvas id="c" width="1240" height="440"></canvas>
+    <canvas id="c"></canvas>
     <div class="chrome">
       <span class="chip"><span class="dot" id="dot"></span><span id="st">подключаюсь</span></span>
       <span class="spacer"></span>
@@ -138,91 +130,103 @@
     </div>
   </div>
 
-  <aside>
-    <h2>Распознано</h2>
-    <div id="feed"><div class="empty">пока тихо</div></div>
-  </aside>
+  <div class="feed" id="feed">
+    <span class="lbl">распознано</span>
+    <div class="empty" id="empty">ждём птицу</div>
+  </div>
 </main>
 
 <nav class="slider" aria-label="View">
   <i class="seg-pill" id="pill" aria-hidden="true"></i>
-  <a href="./">collage</a>
-  <a href="./">stats</a>
-  <a href="./">atlas</a>
-  <a href="./live.html" aria-current="page" id="tabLive">live</a>
+  <a href="/">collage</a>
+  <a href="/">stats</a>
+  <a href="/">atlas</a>
+  <a href="/live.html" aria-current="page" id="tabLive">live</a>
 </nav>
 
 <script>
 var cv=document.getElementById('c'), g=cv.getContext('2d',{alpha:false});
-var st=document.getElementById('st'), dot=document.getElementById('dot'), feed=document.getElementById('feed');
+var scope=cv.parentNode, feed=document.getElementById('feed'), empty=document.getElementById('empty');
+var st=document.getElementById('st'), dot=document.getElementById('dot');
 var ctx,analyser,audio,gain,data,running=false;
-var MAX_HZ=12000, pxPerSec=0, frames=0, tMark=0, skew=0, seen={}, cards=[];
-var dark=document.documentElement.getAttribute('data-theme')==='dark';
+var MAX_HZ=12000, STEP=3;             // пикселей за кадр — полотно заполняется за ~5 секунд
+var pxPerSec=0, frames=0, tMark=0, skew=0, seen={}, hits=[];
 
-// Пилюля садится на активную вкладку — как в основном интерфейсе.
 (function(){
   var pill=document.getElementById('pill'), tab=document.getElementById('tabLive');
-  function place(){ pill.style.width=tab.offsetWidth+'px';
-                    pill.style.transform='translateX('+tab.offsetLeft+'px)'; }
+  function place(){ pill.style.width=tab.offsetWidth+'px'; pill.style.transform='translateX('+tab.offsetLeft+'px)'; }
   place(); addEventListener('resize',place);
 })();
 
 function stationNow(){ return Date.now()+skew; }
 
+function fit(){
+  var r=scope.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
+  cv.width=Math.max(320,Math.round(r.width*dpr));
+  cv.height=Math.max(200,Math.round(r.height*dpr));
+  g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--scope').trim()||'#0b0c0e';
+  g.fillRect(0,0,cv.width,cv.height);
+}
+addEventListener('resize',function(){ fit(); });
+
 function paint(){
   if(!running) return;
   requestAnimationFrame(paint);
   analyser.getByteFrequencyData(data);
-  g.drawImage(cv,-1,0);
+  g.drawImage(cv,-STEP,0);
   var nyq=ctx.sampleRate/2, bins=Math.min(data.length,Math.round(MAX_HZ/nyq*data.length));
-  var x=cv.width-1;
+  var x=cv.width-STEP;
   for(var y=0;y<cv.height;y++){
     var i=Math.round((1-y/cv.height)*(bins-1)), v=data[i]/255;
-    // тёплая шкала: тишина уходит в цвет полотна, сигнал — в золото
     g.fillStyle='rgb('+Math.round(238*Math.min(1,v*1.75))+','+
                        Math.round(196*Math.pow(v,1.45))+','+
                        Math.round(84*Math.pow(v,2.6))+')';
-    g.fillRect(x,y,1,1);
+    g.fillRect(x,y,STEP,1);
   }
   frames++;
   var dt=(performance.now()-tMark)/1000;
-  if(dt>=2){ pxPerSec=frames/dt; frames=0; tMark=performance.now(); }
+  if(dt>=1.5){ pxPerSec=frames*STEP/dt; frames=0; tMark=performance.now(); }
+  moveHits();
 }
 
-// Метка нарисована на самом полотне, поэтому уезжает вместе со звуком,
-// к которому относится.
-function mark(name,conf,ageSec){
+// Карточка и засечка привязаны ко времени детекции и едут вместе с полотном.
+// Ушедшие за левый край снимаем — на экране только то, что ещё слышно.
+function moveHits(){
   if(!pxPerSec) return;
-  var x=Math.round(cv.width-ageSec*pxPerSec);
-  if(x<80||x>cv.width) return;
-  g.save();
-  g.strokeStyle='rgba(231,172,16,.8)'; g.lineWidth=1;
-  g.beginPath(); g.moveTo(x+.5,0); g.lineTo(x+.5,cv.height); g.stroke();
-  g.font='500 14px ui-serif,Georgia,serif'; g.textAlign='right';
-  var w=g.measureText(name).width+16;
-  g.fillStyle='rgba(11,12,14,.72)';
-  g.fillRect(x-w,8,w,38);
-  g.fillStyle='#e7ac10'; g.fillText(name,x-8,25);
-  g.font='10px ui-monospace,Menlo,monospace'; g.fillStyle='rgba(236,232,225,.65)';
-  g.fillText(Math.round(conf*100)+'%',x-8,40);
-  g.restore();
+  var w=scope.clientWidth, dpr=Math.min(devicePixelRatio||1,2), speed=pxPerSec/dpr;
+  for(var i=hits.length-1;i>=0;i--){
+    var h=hits[i], age=(stationNow()-h.at)/1000, x=w-age*speed;
+    if(x<-260){ h.card.remove(); h.tick.remove(); hits.splice(i,1); continue; }
+    h.card.style.left=Math.round(x)+'px';
+    h.tick.style.left=Math.round(x)+'px';
+  }
+  empty.style.display=hits.length?'none':'grid';
 }
 
-function render(){
-  if(!cards.length){ feed.innerHTML='<div class="empty">пока тихо</div>'; return; }
-  feed.innerHTML=cards.slice(0,8).map(function(c){
-    var ago=Math.max(0,Math.round((stationNow()-c.at)/1000));
-    var when=ago<60?ago+' сек назад':(ago<3600?Math.round(ago/60)+' мин назад':Math.round(ago/3600)+' ч назад');
-    return '<div class="card"><div class="n">'+c.name+'</div><div class="m">'+
-           Math.round(c.conf*100)+'% · '+when+'</div></div>';
-  }).join('');
+function wikiUrl(sci){ return 'https://ru.wikipedia.org/wiki/'+encodeURIComponent(sci.replace(/ /g,'_')); }
+
+function addHit(s,at){
+  var a=document.createElement('a');
+  a.className='hit fresh'; a.href=wikiUrl(s.sci); a.target='_blank'; a.rel='noopener';
+  a.title=s.sci+' · открыть в Википедии';
+  var t=new Date(at);
+  a.innerHTML='<span class="n"></span><span class="m"></span>';
+  a.querySelector('.n').textContent=s.com;
+  a.querySelector('.m').textContent=Math.round(s.best_conf*100)+'% · '+
+    String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+
+    String(t.getSeconds()).padStart(2,'0');
+  var tick=document.createElement('i'); tick.className='tick';
+  feed.appendChild(tick); feed.appendChild(a);
+  hits.push({card:a,tick:tick,at:at});
+  moveHits();
+  setTimeout(function(){ a.classList.remove('fresh'); },600);
 }
 
 async function poll(){
   try{
-    var r=await fetch('./avian/api/birdnet-api.php?action=recent&hours=2',{credentials:'same-origin'});
+    var r=await fetch('/avian/api/birdnet-api.php?action=recent&hours=1',{credentials:'same-origin'});
     var j=await r.json();
-    if(j.as_of){ skew=new Date(j.as_of).getTime()-Date.now(); }
+    if(j.as_of) skew=new Date(j.as_of).getTime()-Date.now();
     if(j.site_name) document.getElementById('site').textContent=j.site_name.toLowerCase();
     var tz=j.as_of?j.as_of.slice(-6):'';
     (j.species||[]).forEach(function(s){
@@ -230,18 +234,10 @@ async function poll(){
       if(seen[s.sci]===at) return;
       var known=seen[s.sci]!==undefined;
       seen[s.sci]=at;
-      cards.unshift({name:s.com,conf:s.best_conf,at:at});
-      cards=cards.slice(0,24);
-      if(known&&running) mark(s.com,s.best_conf,(stationNow()-at)/1000);
+      // при первом заходе не сыплем старыми детекциями — только то, что ещё на экране
+      if(known||(stationNow()-at)<120000) addHit(s,at);
     });
-    cards.sort(function(a,b){return b.at-a.at});
-    render();
   }catch(e){}
-}
-
-function paintIdle(){
-  g.fillStyle=dark?'#0b0c0e':'#0e0f12';
-  g.fillRect(0,0,cv.width,cv.height);
 }
 
 async function start(){
@@ -250,25 +246,22 @@ async function start(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   var src=ctx.createMediaElementSource(audio);
   analyser=ctx.createAnalyser(); analyser.fftSize=4096; analyser.smoothingTimeConstant=.55;
-  gain=ctx.createGain(); gain.gain.value=0;      // анализ идёт всегда, слышимость — отдельно
+  gain=ctx.createGain(); gain.gain.value=0;
   src.connect(analyser); analyser.connect(gain); gain.connect(ctx.destination);
-  await audio.play();
-  await ctx.resume();
+  await audio.play(); await ctx.resume();
   data=new Uint8Array(analyser.frequencyBinCount);
   running=true; tMark=performance.now(); frames=0;
   dot.classList.add('on'); st.textContent='слушаю';
   paint();
 }
 
-// Спектрограмма должна идти сразу. Если браузер требует жеста —
-// ловим первый же и стартуем, не заставляя целиться в кнопку.
 function boot(){
-  paintIdle();
+  fit();
   start().catch(function(){
     st.textContent='коснитесь экрана';
     var go=function(){ start().then(function(){
       removeEventListener('pointerdown',go); removeEventListener('keydown',go);
-    }).catch(function(e){ st.textContent='нет потока'; }); };
+    }).catch(function(){ st.textContent='нет потока'; }); };
     addEventListener('pointerdown',go); addEventListener('keydown',go);
   });
 }
@@ -280,5 +273,5 @@ document.getElementById('snd').addEventListener('click',function(){
   gain.gain.setTargetAtTime(on?1:0,ctx.currentTime,.05);
 });
 
-boot(); poll(); setInterval(poll,5000); setInterval(render,15000);
+boot(); poll(); setInterval(poll,4000);
 </script>

@@ -142,17 +142,36 @@ RUN cd /home/birdnet/BirdNET-Pi/scripts \
  && /usr/local/sbin/avian-caddy-refresh || true
 
 # Вкладка «live» в нижнем переключателе интерфейса и страница живого сигнала.
-# Скрипт вкладки подключается отдельным файлом, а не правкой apt.js: там 540 КБ
-# чужого кода, который обновляется вместе с апстримом. Страница кладётся в
-# avian/frontend и симлинкуется в корень сайта рядом с остальной статикой.
+# Скрипт вкладки — отдельным файлом, а не правкой apt.js: там 540 КБ чужого
+# кода, который меняется с каждым обновлением апстрима.
 COPY live.html live-tab.js /home/birdnet/BirdNET-Pi/avian/frontend/
 RUN set -eux; \
     chown birdnet:birdnet /home/birdnet/BirdNET-Pi/avian/frontend/live.html \
                           /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js; \
     grep -q 'live-tab.js' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
-      || sed -i 's|</body>|<script src="./live-tab.js" defer></script>\n</body>|' \
+      || sed -i 's|</body>|<script src="/live-tab.js" defer></script>\n</body>|' \
            /home/birdnet/BirdNET-Pi/avian/frontend/index.html; \
     grep -c 'live-tab.js' /home/birdnet/BirdNET-Pi/avian/frontend/index.html
+
+# Корень сайта (BirdSongs/Extracted) — это том с данными, и файлы из образа в
+# уже существующем томе сами не появятся. Апстрим решает это симлинками
+# (index.html в корне указывает в avian/frontend), но расставляет их только при
+# установке. Свои — пересоздаём при каждом старте: юнит дешёвый, а страница
+# всегда соответствует образу, даже если том старше него.
+RUN printf '%s\n' \
+      '[Unit]' \
+      'Description=Avian Visitors: link the live page into the web root' \
+      'After=local-fs.target' \
+      '' \
+      '[Service]' \
+      'Type=oneshot' \
+      'RemainAfterExit=yes' \
+      'ExecStart=/bin/sh -c "ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live.html /home/birdnet/BirdSongs/Extracted/live.html && ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js /home/birdnet/BirdSongs/Extracted/live-tab.js"' \
+      '' \
+      '[Install]' \
+      'WantedBy=multi-user.target' \
+      > /etc/systemd/system/avian-live-link.service \
+ && systemctl enable avian-live-link.service
 
 # Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
 # настройки языка для них нет, хотя названия видов уже переведены через

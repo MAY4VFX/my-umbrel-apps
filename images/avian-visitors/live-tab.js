@@ -9,7 +9,7 @@
     b.type='button'; b.textContent='live'; b.setAttribute('data-live-tab','1');
     b.addEventListener('click',function(e){
       e.preventDefault(); e.stopPropagation();
-      location.href='./live.html';
+      location.href='/live.html';
     },true);
     nav.appendChild(b);
     return true;
