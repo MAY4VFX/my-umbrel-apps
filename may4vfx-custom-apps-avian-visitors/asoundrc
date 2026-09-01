@@ -10,7 +10,17 @@ pcm.usb_mic_raw {
     }
 }
 
+# Петличка отдаёт очень тихий сигнал (пик около -40 dBFS), а аппаратное
+# усиление карты уже стоит на максимуме (0 dB). Поднимаем вчетверо, то есть
+# на +12 дБ: без этого уверенность BirdNET не дотягивает до порога 0.7 и
+# распознанные птицы не попадают в базу.
+pcm.usb_mic_boost {
+    type route
+    slave.pcm "usb_mic_raw"
+    ttable.0.0 4.0
+}
+
 pcm.usb_mic {
     type plug
-    slave.pcm "usb_mic_raw"
+    slave.pcm "usb_mic_boost"
 }
