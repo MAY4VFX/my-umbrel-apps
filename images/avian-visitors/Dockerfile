@@ -126,6 +126,21 @@ RUN cd /home/birdnet/BirdNET-Pi/avian/scripts \
       ../frontend/apt.js \
  && grep -E "var (TABLE|SKETCH|IMG)_VERSION" ../frontend/apt.js
 
+# Живое аудио апстрим отдаёт только при «прямом локальном» обращении: микрофон
+# слышит разговоры рядом, поэтому наружу поток не выпускается. Проверка — это
+# приватные диапазоны IP плюс Host вида *.local. Станция ездит в фургоне, и
+# снаружи мы ходим к ней через Tailscale (100.64.0.0/10, имена *.ts.net), что
+# под условие не подпадало — поток отдавал 404. Tailnet приватный не меньше
+# домашней сети, поэтому добавляем его в то же условие.
+RUN cd /home/birdnet/BirdNET-Pi/scripts \
+ && sed -i 's|^\( *\)remote_ip private_ranges$|\1remote_ip private_ranges 100.64.0.0/10|' \
+      update_caddyfile.sh \
+ && sed -i 's|localhost\|\[a-z0-9\]\[a-z0-9.-\]\*\[.\]local|localhost\|[a-z0-9][a-z0-9.-]*[.]local\|[a-z0-9][a-z0-9.-]*[.]ts[.]net|g' \
+      update_caddyfile.sh \
+ && grep -c 'private_ranges 100[.]64' update_caddyfile.sh \
+ && grep -c 'ts[.]net' update_caddyfile.sh \
+ && /usr/local/sbin/avian-caddy-refresh || true
+
 # Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
 # настройки языка для них нет, хотя названия видов уже переведены через
 # DATABASE_LANG. Статьи ищутся по научному названию с включёнными редиректами,
