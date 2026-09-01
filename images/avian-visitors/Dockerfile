@@ -141,6 +141,19 @@ RUN cd /home/birdnet/BirdNET-Pi/scripts \
  && grep -c 'ts[.]net' update_caddyfile.sh \
  && /usr/local/sbin/avian-caddy-refresh || true
 
+# Вкладка «live» в нижнем переключателе интерфейса и страница живого сигнала.
+# Скрипт вкладки подключается отдельным файлом, а не правкой apt.js: там 540 КБ
+# чужого кода, который обновляется вместе с апстримом. Страница кладётся в
+# avian/frontend и симлинкуется в корень сайта рядом с остальной статикой.
+COPY live.html live-tab.js /home/birdnet/BirdNET-Pi/avian/frontend/
+RUN set -eux; \
+    chown birdnet:birdnet /home/birdnet/BirdNET-Pi/avian/frontend/live.html \
+                          /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js; \
+    grep -q 'live-tab.js' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
+      || sed -i 's|</body>|<script src="./live-tab.js" defer></script>\n</body>|' \
+           /home/birdnet/BirdNET-Pi/avian/frontend/index.html; \
+    grep -c 'live-tab.js' /home/birdnet/BirdNET-Pi/avian/frontend/index.html
+
 # Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
 # настройки языка для них нет, хотя названия видов уже переведены через
 # DATABASE_LANG. Статьи ищутся по научному названию с включёнными редиректами,
