@@ -138,9 +138,9 @@
 
 <nav class="slider" aria-label="View">
   <i class="seg-pill" id="pill" aria-hidden="true"></i>
-  <a href="/">collage</a>
-  <a href="/">stats</a>
-  <a href="/">atlas</a>
+  <a href="/" data-view="0">collage</a>
+  <a href="/" data-view="1">stats</a>
+  <a href="/" data-view="2">atlas</a>
   <a href="/live.html" aria-current="page" id="tabLive">live</a>
 </nav>
 
@@ -151,6 +151,15 @@ var st=document.getElementById('st'), dot=document.getElementById('dot');
 var ctx,analyser,audio,gain,data,running=false;
 var MAX_HZ=12000, STEP=3;             // пикселей за кадр — полотно заполняется за ~5 секунд
 var pxPerSec=0, frames=0, tMark=0, skew=0, seen={}, hits=[];
+
+// Интерфейс восстанавливает вид из localStorage, а не из URL, поэтому переход
+// на корень открывал последний сохранённый вид (обычно коллаж). Записываем
+// нужный индекс перед уходом — тем же ключом и форматом, что использует apt.js.
+document.querySelectorAll('.slider a[data-view]').forEach(function(a){
+  a.addEventListener('click',function(){
+    try{ localStorage.setItem('bird:view',a.dataset.view); }catch(e){}
+  });
+});
 
 (function(){
   var pill=document.getElementById('pill'), tab=document.getElementById('tabLive');
