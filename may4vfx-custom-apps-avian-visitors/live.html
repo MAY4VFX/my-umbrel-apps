@@ -1,0 +1,104 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Живой сигнал</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{color-scheme:dark}
+  body{margin:0;background:#15161a;color:#c9c7c1;font:13px/1.5 ui-monospace,SFMono-Regular,monospace;
+       display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px;box-sizing:border-box}
+  h1{font-size:15px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;opacity:.6;margin:0}
+  canvas{width:100%;max-width:1100px;height:420px;border-radius:10px;background:#0b0c0e;
+         box-shadow:0 10px 40px #0009;display:block}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+  button{background:#23252b;color:#d8d6d0;border:1px solid #34373f;border-radius:7px;
+         padding:8px 16px;font:inherit;cursor:pointer}
+  button:hover{background:#2b2e35}
+  .s{opacity:.55}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4b4e55;margin-right:7px}
+  .dot.on{background:#6fcf72;animation:p 2s infinite}
+  @keyframes p{50%{opacity:.3}}
+  .hint{max-width:1100px;opacity:.4;font-size:12px;text-align:center}
+</style>
+
+<h1>Avian Visitors · живой сигнал</h1>
+<canvas id="c" width="1100" height="420"></canvas>
+<div class="row">
+  <button id="go">Включить</button>
+  <button id="snd">Звук: выкл</button>
+  <span class="s"><span class="dot" id="dot"></span><span id="st">не подключено</span></span>
+</div>
+<div class="hint">Спектрограмма рисуется браузером прямо из потока микрофона. Пение птиц — яркие штрихи в верхней половине; ровный фон снизу это шум ветра и техники.</div>
+
+<script>
+var cv = document.getElementById('c'), g = cv.getContext('2d');
+var st = document.getElementById('st'), dot = document.getElementById('dot');
+var ctx, analyser, audio, gain, data, running = false, muted = true;
+
+var MAX_HZ = 12000;   // птицы поют примерно до 10 кГц, выше только шум
+
+function paint(){
+  if (!running) return;
+  requestAnimationFrame(paint);
+  analyser.getByteFrequencyData(data);
+  // сдвигаем полотно влево и дорисовываем свежий столбец справа
+  var img = g.getImageData(1, 0, cv.width - 1, cv.height);
+  g.putImageData(img, 0, 0);
+  var nyq = ctx.sampleRate / 2;
+  var bins = Math.min(data.length, Math.round(MAX_HZ / nyq * data.length));
+  for (var y = 0; y < cv.height; y++){
+    var i = Math.round((1 - y / cv.height) * (bins - 1));
+    var v = data[i] / 255;
+    // тёплая палитра: тишина тёмная, сигнал уходит в жёлтый
+    var r = Math.round(255 * Math.min(1, v * 1.6));
+    var gr = Math.round(215 * Math.pow(v, 1.5));
+    var b = Math.round(90 * Math.pow(v, 3));
+    g.fillStyle = 'rgb(' + r + ',' + gr + ',' + b + ')';
+    g.fillRect(cv.width - 1, y, 1, 1);
+  }
+}
+
+async function start(){
+  try {
+    st.textContent = 'подключаюсь…';
+    audio = new Audio('http://' + location.hostname + ':8091/stream');
+    audio.crossOrigin = 'anonymous';
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var src = ctx.createMediaElementSource(audio);
+    analyser = ctx.createAnalyser();
+    analyser.fftSize = 4096;
+    analyser.smoothingTimeConstant = 0.55;
+    gain = ctx.createGain();
+    gain.gain.value = 0;              // анализ идёт всегда, звук отдельно
+    src.connect(analyser);
+    analyser.connect(gain);
+    gain.connect(ctx.destination);
+    await audio.play();
+    await ctx.resume();
+    data = new Uint8Array(analyser.frequencyBinCount);
+    running = true;
+    dot.classList.add('on');
+    st.textContent = 'слушаю микрофон';
+    document.getElementById('go').textContent = 'Остановить';
+    paint();
+  } catch (e) {
+    st.textContent = 'не удалось: ' + e.message;
+  }
+}
+
+function stop(){
+  running = false;
+  if (audio) { audio.pause(); audio.src = ''; }
+  if (ctx) ctx.close();
+  dot.classList.remove('on');
+  st.textContent = 'остановлено';
+  document.getElementById('go').textContent = 'Включить';
+}
+
+document.getElementById('go').onclick = function(){ running ? stop() : start(); };
+document.getElementById('snd').onclick = function(){
+  if (!gain) return;
+  muted = !muted;
+  gain.gain.value = muted ? 0 : 1;
+  this.textContent = 'Звук: ' + (muted ? 'выкл' : 'вкл');
+};
+</script>
