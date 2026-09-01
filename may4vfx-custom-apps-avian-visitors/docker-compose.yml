@@ -38,6 +38,14 @@ services:
       # с владельцем uid 1000, который внутри контейнера и есть birdnet.
       - ${APP_DATA_DIR}/birdnet.conf:/home/birdnet/BirdNET-Pi/birdnet.conf
       - ${APP_DATA_DIR}/asoundrc:/home/birdnet/.asoundrc:ro
+      # База детекций и состояние админ-авторизации по умолчанию лежат внутри
+      # контейнера и обнулялись при каждом его пересоздании — вместе со всеми
+      # накопленными наблюдениями и заданным паролем. Путь к базе захардкожен
+      # в коде (scripts/birds.db), поэтому монтируем именно файл; состояние
+      # авторизации — каталог, и его отдаём тому, чтобы владелец и права
+      # унаследовались из образа.
+      - ${APP_DATA_DIR}/birds.db:/home/birdnet/BirdNET-Pi/scripts/birds.db
+      - adminstate:/var/lib/avian-visitors
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime:ro
     tmpfs:
@@ -46,3 +54,4 @@ services:
 
 volumes:
   birdsongs:
+  adminstate:
