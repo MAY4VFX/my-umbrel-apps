@@ -60,7 +60,7 @@ function paint(){
 async function start(){
   try {
     st.textContent = 'подключаюсь…';
-    audio = new Audio('http://' + location.hostname + ':8091/stream');
+    audio = new Audio('http://' + location.hostname + ':8090/stream');
     audio.crossOrigin = 'anonymous';
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     var src = ctx.createMediaElementSource(audio);
