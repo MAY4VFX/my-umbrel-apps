@@ -1,0 +1,3 @@
+$comname ($sciname)
+Уверенность: $confidencepct% · $date в $time
+Послушать: $listenurl

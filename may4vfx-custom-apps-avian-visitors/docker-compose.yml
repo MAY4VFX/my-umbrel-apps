@@ -45,6 +45,10 @@ services:
       # авторизации — каталог, и его отдаём тому, чтобы владелец и права
       # унаследовались из образа.
       - ${APP_DATA_DIR}/birds.db:/home/birdnet/BirdNET-Pi/scripts/birds.db
+      # Уведомления: адреса Apprise (в них попадает токен бота, поэтому файл
+      # заполняется на устройстве) и шаблон сообщения.
+      - ${APP_DATA_DIR}/apprise.txt:/home/birdnet/BirdNET-Pi/apprise.txt
+      - ${APP_DATA_DIR}/body.txt:/home/birdnet/BirdNET-Pi/body.txt
       - adminstate:/var/lib/avian-visitors
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime:ro
