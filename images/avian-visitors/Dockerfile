@@ -107,6 +107,17 @@ RUN git clone --depth=1 -b iberia-illustrations --filter=blob:none --sparse \
  && ls /home/birdnet/BirdNET-Pi/avian/assets/illustrations | wc -l \
  && rm -rf /tmp/iberia
 
+# Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
+# настройки языка для них нет, хотя названия видов уже переведены через
+# DATABASE_LANG. Статьи ищутся по научному названию с включёнными редиректами,
+# а в русской Википедии латинские названия ведут на русские статьи
+# (Passer domesticus → Домовый воробей), так что подмена домена работает.
+RUN sed -i 's|https://en\.wikipedia\.org|https://ru.wikipedia.org|g' \
+      /home/birdnet/BirdNET-Pi/avian/api/wiki.php \
+      /home/birdnet/BirdNET-Pi/avian/api/cutout.php \
+      /home/birdnet/BirdNET-Pi/avian/frontend/apt.js \
+ && grep -c 'ru.wikipedia.org' /home/birdnet/BirdNET-Pi/avian/api/wiki.php
+
 USER root
 RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
     && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
