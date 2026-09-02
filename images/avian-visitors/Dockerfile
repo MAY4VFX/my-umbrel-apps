@@ -144,10 +144,8 @@ RUN cd /home/birdnet/BirdNET-Pi/scripts \
 # Вкладка «live» в нижнем переключателе интерфейса и страница живого сигнала.
 # Скрипт вкладки — отдельным файлом, а не правкой apt.js: там 540 КБ чужого
 # кода, который меняется с каждым обновлением апстрима.
-COPY live.html live-tab.js /home/birdnet/BirdNET-Pi/avian/frontend/
+COPY --chown=birdnet:birdnet live.html live-tab.js /home/birdnet/BirdNET-Pi/avian/frontend/
 RUN set -eux; \
-    chown birdnet:birdnet /home/birdnet/BirdNET-Pi/avian/frontend/live.html \
-                          /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js; \
     grep -q 'live-tab.js' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
       || sed -i 's|</body>|<script src="/live-tab.js" defer></script>\n</body>|' \
            /home/birdnet/BirdNET-Pi/avian/frontend/index.html; \
@@ -170,8 +168,8 @@ RUN printf '%s\n' \
       '' \
       '[Install]' \
       'WantedBy=multi-user.target' \
-      > /etc/systemd/system/avian-live-link.service \
- && systemctl enable avian-live-link.service
+      | sudo tee /etc/systemd/system/avian-live-link.service > /dev/null \
+ && sudo systemctl enable avian-live-link.service
 
 # Раздел About и ссылка «Wikipedia» жёстко указывают на en.wikipedia.org —
 # настройки языка для них нет, хотя названия видов уже переведены через
