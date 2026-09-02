@@ -172,13 +172,14 @@ RUN set -eux; \
 # всегда соответствует образу, даже если том старше него.
 RUN printf '%s\n' \
       '[Unit]' \
-      'Description=Avian Visitors: link the live page into the web root' \
+      'Description=Avian Visitors: link the live page and fix config permissions' \
       'After=local-fs.target' \
       '' \
       '[Service]' \
       'Type=oneshot' \
       'RemainAfterExit=yes' \
       'ExecStart=/bin/sh -c "ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live.html /home/birdnet/BirdSongs/Extracted/live.html && ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js /home/birdnet/BirdSongs/Extracted/live-tab.js"' \
+      'ExecStart=/bin/sh -c "chmod g+w /home/birdnet/BirdNET-Pi/birdnet.conf /home/birdnet/BirdNET-Pi/body.txt 2>/dev/null; chgrp birdnet /home/birdnet/BirdNET-Pi/apprise.txt 2>/dev/null && chmod 660 /home/birdnet/BirdNET-Pi/apprise.txt; true"' \
       '' \
       '[Install]' \
       'WantedBy=multi-user.target' \
