@@ -249,8 +249,23 @@ async function poll(){
   }catch(e){}
 }
 
+var STREAM='http://'+location.hostname+':8090/stream';
+
+// Отличаем «поток недоступен» от «браузер не пустил автозапуск» — иначе
+// на экране одно и то же «нет потока» при совершенно разных причинах.
+async function probe(){
+  try{
+    var c=new AbortController(); setTimeout(function(){c.abort();},4000);
+    var r=await fetch(STREAM,{mode:'cors',signal:c.signal});
+    c.abort();
+    return r.ok?'':'HTTP '+r.status;
+  }catch(e){
+    return e.name==='AbortError'?'':(e.name+': '+(e.message||'сеть'));
+  }
+}
+
 async function start(){
-  audio=new Audio('http://'+location.hostname+':8090/stream');
+  audio=new Audio(STREAM);
   audio.crossOrigin='anonymous';
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   var src=ctx.createMediaElementSource(audio);
@@ -264,13 +279,21 @@ async function start(){
   paint();
 }
 
-function boot(){
+async function boot(){
   fit();
-  start().catch(function(){
+  var bad=await probe();
+  if(bad){ st.textContent='поток недоступен'; st.title=bad; console.error('AvianVisitors live:',bad); return; }
+  start().catch(function(e){
+    // поток есть, значит дело в политике автозапуска — ловим любой жест
     st.textContent='коснитесь экрана';
+    console.warn('AvianVisitors live: автозапуск отклонён —',e&&e.name,e&&e.message);
     var go=function(){ start().then(function(){
       removeEventListener('pointerdown',go); removeEventListener('keydown',go);
-    }).catch(function(){ st.textContent='нет потока'; }); };
+    }).catch(function(e2){
+      st.textContent='не запускается';
+      st.title=(e2&&e2.name||'')+': '+(e2&&e2.message||'');
+      console.error('AvianVisitors live:',e2);
+    }); };
     addEventListener('pointerdown',go); addEventListener('keydown',go);
   });
 }
