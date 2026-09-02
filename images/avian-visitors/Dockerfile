@@ -132,14 +132,28 @@ RUN cd /home/birdnet/BirdNET-Pi/avian/scripts \
 # снаружи мы ходим к ней через Tailscale (100.64.0.0/10, имена *.ts.net), что
 # под условие не подпадало — поток отдавал 404. Tailnet приватный не меньше
 # домашней сети, поэтому добавляем его в то же условие.
-RUN cd /home/birdnet/BirdNET-Pi/scripts \
- && sed -i 's|^\( *\)remote_ip private_ranges$|\1remote_ip private_ranges 100.64.0.0/10|' \
-      update_caddyfile.sh \
- && sed -i 's|localhost\|\[a-z0-9\]\[a-z0-9.-\]\*\[.\]local|localhost\|[a-z0-9][a-z0-9.-]*[.]local\|[a-z0-9][a-z0-9.-]*[.]ts[.]net|g' \
-      update_caddyfile.sh \
- && grep -c 'private_ranges 100[.]64' update_caddyfile.sh \
- && grep -c 'ts[.]net' update_caddyfile.sh \
- && /usr/local/sbin/avian-caddy-refresh || true
+#
+# Патчатся ОБЕ копии генератора: установщик копирует scripts/update_caddyfile.sh
+# в /usr/local/sbin/avian-caddy-refresh, и перегенерацию выполняет именно копия —
+# правка одного оригинала ничего не меняла. Замену делает python, а не sed:
+# шаблон хоста — длинный регэксп со скобками, экранирование в sed его ломало.
+RUN python3 - <<'PY' \
+ && sudo install -o root -g root -m 0755 \
+      /home/birdnet/BirdNET-Pi/scripts/update_caddyfile.sh \
+      /usr/local/sbin/avian-caddy-refresh \
+ && sudo /usr/local/sbin/avian-caddy-refresh
+import re
+p = '/home/birdnet/BirdNET-Pi/scripts/update_caddyfile.sh'
+s = open(p).read()
+host = '[a-z0-9][a-z0-9.-]*[.]local'
+if 'ts[.]net' not in s:
+    s = s.replace(host, host + '|[a-z0-9][a-z0-9.-]*[.]ts[.]net')
+s = re.sub(r'^( *)remote_ip private_ranges$',
+           r'\1remote_ip private_ranges 100.64.0.0/10', s, flags=re.M)
+open(p, 'w').write(s)
+assert s.count('100.64.0.0/10') and s.count('ts[.]net'), 'патч tailnet не применился'
+print('tailnet разрешён в', s.count('100.64.0.0/10'), 'правилах')
+PY
 
 # Вкладка «live» в нижнем переключателе интерфейса и страница живого сигнала.
 # Скрипт вкладки — отдельным файлом, а не правкой apt.js: там 540 КБ чужого
