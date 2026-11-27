@@ -87,6 +87,27 @@ RUN sed -i \
     scripts/install_services.sh \
  && grep -nE '^  : # отключено' scripts/install_services.sh
 
+# С октября 2026 апстрим ставит отдельный пул PHP-FPM для экспорта наборов
+# (scripts/security_refresh.sh) и после установки пула требует, чтобы служба
+# PHP-FPM уже работала, и перезагружает её. При сборке systemd не запущен —
+# установка падала с «no PHP-FPM service is active», и образ не собирался
+# с 12 октября. Пул к этому моменту уже записан и проверен (php-fpm -t), а
+# сокет php-fpm создаст при первом старте контейнера, поэтому без systemd
+# шаг перезагрузки пропускаем. Признак — нет /run/systemd/system: в
+# работающем контейнере systemd — PID 1 и каталог есть, проверка жива.
+RUN python3 - <<'PY'
+p = '/home/birdnet/BirdNET-Pi/scripts/security_refresh.sh'
+s = open(p).read()
+old = """  [ "${#active_versions[@]}" -gt 0 ] \\
+    || bundle_fpm_fail 'no PHP-FPM service is active'"""
+new = """  [ -d /run/systemd/system ] || return 0  # сборка образа: systemd не запущен
+  [ "${#active_versions[@]}" -gt 0 ] \\
+    || bundle_fpm_fail 'no PHP-FPM service is active'"""
+assert s.count(old) == 1, 'патч security_refresh.sh не применился'
+open(p, 'w').write(s.replace(old, new))
+print('security_refresh: без systemd перезагрузка PHP-FPM пропускается')
+PY
+
 # Инсталлятор ставит пакеты, но своего `apt update` перед первым apt install
 # не делает, а списки после базового слоя вычищены — обновляем сами.
 RUN sudo apt-get update && bash scripts/install_birdnet.sh
