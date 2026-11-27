@@ -126,6 +126,38 @@ RUN cd /home/birdnet/BirdNET-Pi/avian/scripts \
       ../frontend/apt.js \
  && grep -E "var (TABLE|SKETCH|IMG)_VERSION" ../frontend/apt.js
 
+# Коллаж нормирует площади плиток под бюджет экрана и задаёт редким птицам
+# минимальную площадь. Когда видов много (за всё время их >100), сумма одних
+# минимальных плиток превышает бюджет — остаток для частых птиц уходит в ноль,
+# и коэффициент сжатия 0 превращает самых слышимых (Зарянка, Сорока…) в плитки
+# 0×0: остаётся только подпись. Чиним: если частым не хватает хотя бы минимума
+# каждой, сжимаем все плитки одинаково — пропорции сохраняются, а цикл
+# «ужать до экрана» ниже всё равно подгоняет размер.
+RUN python3 - <<'PY'
+p = '/home/birdnet/BirdNET-Pi/avian/frontend/apt.js'
+s = open(p).read()
+old = """      var shrink = flexSum > 0 ? Math.min(1, flexBudget / flexSum) : 1;
+      tiles.forEach(function (t) {
+        if (t.area > minArea + 1e-9) t.area *= shrink;
+      });"""
+new = """      var flexCount = tiles.filter(function (t) { return t.area > minArea + 1e-9; }).length;
+      if (flexBudget < flexCount * minArea) {
+        var uniform = budget / sumA;
+        tiles.forEach(function (t) { t.area *= uniform; });
+      } else {
+        var shrink = flexSum > 0 ? Math.min(1, flexBudget / flexSum) : 1;
+        tiles.forEach(function (t) {
+          if (t.area > minArea + 1e-9) t.area *= shrink;
+        });
+      }"""
+assert s.count(old) == 1, 'патч площадей коллажа не применился'
+open(p, 'w').write(s.replace(old, new))
+print('коллаж: частые птицы больше не обнуляются')
+PY
+# Новая версия apt.js в index.html, иначе браузеры держат старый скрипт из кэша.
+RUN sed -i 's|apt.js?v=r214"|apt.js?v=r214-eu1"|' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
+ && grep -q 'apt.js?v=r214-eu1"' /home/birdnet/BirdNET-Pi/avian/frontend/index.html
+
 # Живое аудио апстрим отдаёт только при «прямом локальном» обращении: микрофон
 # слышит разговоры рядом, поэтому наружу поток не выпускается. Проверка — это
 # приватные диапазоны IP плюс Host вида *.local. Станция ездит в фургоне, и
@@ -201,7 +233,14 @@ USER root
 RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
     && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
+    && apt-get -y upgrade \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# В ноябре 2026 PHP закрыл пачку уязвимостей (в т.ч. request smuggling в
+# PHP-FPM, через который здесь работает API); исправления — с 8.4.28.
+# Сборка падает, если в образ попала версия старше.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.4.28", ">=") ? 0 : 1);' \
+    || { php -v; echo 'PHP старше 8.4.28 - нет исправлений 2026-11'; exit 1; }
 
 # Юнит Caddy из пакета Debian просит PrivateTmp и ProtectSystem, а systemd
 # внутри контейнера не может построить mount namespace (/tmp не отдельная точка
