@@ -245,14 +245,24 @@ RUN set -eux; \
 # (index.html в корне указывает в avian/frontend), но расставляет их только при
 # установке. Свои — пересоздаём при каждом старте: юнит дешёвый, а страница
 # всегда соответствует образу, даже если том старше него.
+#
+# То же с /var/lib/avian-visitors (именованный том): новые версии апстрима
+# кладут туда служебные файлы (educators.lock, bundles/…), а в старом томе их
+# нет — API отвечал 503 «educator lock is missing or unsafe», а без ссылок на
+# новые файлы фронтенда (bundles.css, bundle-ui.js) — 404. Поэтому при старте,
+# до caddy и php-fpm: докладываем из эталона образа недостающие файлы, ничего
+# не перезаписывая (cp -an), и зовём штатный avian-link-webroot апстрима.
 RUN printf '%s\n' \
       '[Unit]' \
-      'Description=Avian Visitors: link the live page and fix config permissions' \
+      'Description=Avian Visitors: sync volume state, link webroot, fix config permissions' \
       'After=local-fs.target' \
+      'Before=caddy.service php8.4-fpm.service' \
       '' \
       '[Service]' \
       'Type=oneshot' \
       'RemainAfterExit=yes' \
+      'ExecStart=/bin/cp -an /usr/share/avian-visitors/state-seed/. /var/lib/avian-visitors/' \
+      'ExecStart=/usr/local/sbin/avian-link-webroot /home/birdnet/BirdNET-Pi /home/birdnet/BirdSongs/Extracted birdnet' \
       'ExecStart=/bin/sh -c "ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live.html /home/birdnet/BirdSongs/Extracted/live.html && ln -sfn /home/birdnet/BirdNET-Pi/avian/frontend/live-tab.js /home/birdnet/BirdSongs/Extracted/live-tab.js"' \
       'ExecStart=/bin/sh -c "chmod g+w /home/birdnet/BirdNET-Pi/birdnet.conf /home/birdnet/BirdNET-Pi/body.txt 2>/dev/null; chgrp birdnet /home/birdnet/BirdNET-Pi/apprise.txt 2>/dev/null && chmod 660 /home/birdnet/BirdNET-Pi/apprise.txt; true"' \
       '' \
@@ -278,7 +288,9 @@ RUN rm -f /run/php/*.pid /run/php/*.sock \
     && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get -y upgrade \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /usr/share/avian-visitors \
+    && cp -a /var/lib/avian-visitors /usr/share/avian-visitors/state-seed
 
 # В ноябре 2026 PHP закрыл пачку уязвимостей (в т.ч. request smuggling в
 # PHP-FPM, через который здесь работает API); исправления — с 8.4.28.
