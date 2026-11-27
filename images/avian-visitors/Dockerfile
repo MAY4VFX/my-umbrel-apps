@@ -51,20 +51,62 @@ RUN useradd -m -s /bin/bash -G audio birdnet \
 # с невнятным "Could not install the systemd live audio policy guard", хотя
 # сам файл политики создавался успешно. Команды запуска глушим, всё остальное
 # (в первую очередь enable, расставляющий симлинки юнитов) отдаём настоящему.
+#
+# php-fpm — исключение: с октября 2026 апстрим (security_refresh.sh,
+# update_caddyfile.sh) после установки пулов проверяет, что служба активна и
+# её сокеты на месте, иначе сборка падает («no PHP-FPM service is active»,
+# «Active PHP-FPM bundle export pool was not found»; образ не собирался с
+# 12 октября). Поэтому для php*-fpm заглушка по-настоящему запускает демон
+# (php-fpm -D), а is-active отвечает по живому процессу из pid-файла — и
+# проверки апстрима проходят как есть, без правок его скриптов.
 # В финальном слое оба бинарника возвращаются на место.
 RUN mv /usr/bin/timedatectl /usr/bin/timedatectl.real \
  && printf '#!/bin/sh\necho "Etc/UTC"\n' > /usr/bin/timedatectl \
  && chmod +x /usr/bin/timedatectl \
- && mv /usr/bin/systemctl /usr/bin/systemctl.real \
- && printf '%s\n' \
-      '#!/bin/sh' \
-      'case "$1" in' \
-      '  start|restart|reload|try-restart|reload-or-restart|daemon-reload|daemon-reexec)' \
-      '    exit 0 ;;' \
-      '  *) exec /usr/bin/systemctl.real "$@" ;;' \
-      'esac' \
-      > /usr/bin/systemctl \
- && chmod +x /usr/bin/systemctl
+ && mv /usr/bin/systemctl /usr/bin/systemctl.real
+COPY --chmod=0755 <<'SH' /usr/bin/systemctl
+#!/bin/sh
+# Заглушка systemctl на время сборки образа (см. Dockerfile).
+REAL=/usr/bin/systemctl.real
+fpm_alive() {
+  for pf in /run/php/php*-fpm.pid; do
+    [ -f "$pf" ] || continue
+    pid=$(cat "$pf" 2>/dev/null)
+    [ -n "$pid" ] && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q 'php-fpm' && return 0
+  done
+  return 1
+}
+fpm_restart() {
+  for pf in /run/php/php*-fpm.pid; do
+    [ -f "$pf" ] || continue
+    pid=$(cat "$pf" 2>/dev/null)
+    # pid-файл мог остаться от прошлого слоя: убиваем, только если это php-fpm
+    if [ -n "$pid" ] && tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q 'php-fpm'; then
+      kill "$pid" 2>/dev/null
+      i=0; while [ -d "/proc/$pid" ] && [ $i -lt 50 ]; do sleep 0.1; i=$((i+1)); done
+    fi
+    rm -f "$pf"
+  done
+  mkdir -p /run/php
+  for b in /usr/sbin/php-fpm[0-9]*; do [ -x "$b" ] && "$b" -D || true; done
+}
+is_fpm_cmd() {
+  for u in "$@"; do case "$u" in php*-fpm*) return 0 ;; esac; done
+  return 1
+}
+case "$1" in
+  start|restart|reload|try-restart|reload-or-restart)
+    is_fpm_cmd "$@" && fpm_restart
+    exit 0 ;;
+  daemon-reload|daemon-reexec)
+    exit 0 ;;
+  is-active)
+    if is_fpm_cmd "$@"; then fpm_alive; exit $?; fi
+    exec "$REAL" "$@" ;;
+  *)
+    exec "$REAL" "$@" ;;
+esac
+SH
 
 USER birdnet
 ENV USER=birdnet
@@ -86,27 +128,6 @@ RUN sed -i \
     -e 's|^  update_etc_hosts$|  : # отключено: /etc/hosts примонтирован Docker|' \
     scripts/install_services.sh \
  && grep -nE '^  : # отключено' scripts/install_services.sh
-
-# С октября 2026 апстрим ставит отдельный пул PHP-FPM для экспорта наборов
-# (scripts/security_refresh.sh) и после установки пула требует, чтобы служба
-# PHP-FPM уже работала, и перезагружает её. При сборке systemd не запущен —
-# установка падала с «no PHP-FPM service is active», и образ не собирался
-# с 12 октября. Пул к этому моменту уже записан и проверен (php-fpm -t), а
-# сокет php-fpm создаст при первом старте контейнера, поэтому без systemd
-# шаг перезагрузки пропускаем. Признак — нет /run/systemd/system: в
-# работающем контейнере systemd — PID 1 и каталог есть, проверка жива.
-RUN python3 - <<'PY'
-p = '/home/birdnet/BirdNET-Pi/scripts/security_refresh.sh'
-s = open(p).read()
-old = """  [ "${#active_versions[@]}" -gt 0 ] \\
-    || bundle_fpm_fail 'no PHP-FPM service is active'"""
-new = """  [ -d /run/systemd/system ] || return 0  # сборка образа: systemd не запущен
-  [ "${#active_versions[@]}" -gt 0 ] \\
-    || bundle_fpm_fail 'no PHP-FPM service is active'"""
-assert s.count(old) == 1, 'патч security_refresh.sh не применился'
-open(p, 'w').write(s.replace(old, new))
-print('security_refresh: без systemd перезагрузка PHP-FPM пропускается')
-PY
 
 # Инсталлятор ставит пакеты, но своего `apt update` перед первым apt install
 # не делает, а списки после базового слоя вычищены — обновляем сами.
@@ -194,6 +215,7 @@ RUN python3 - <<'PY' \
  && sudo install -o root -g root -m 0755 \
       /home/birdnet/BirdNET-Pi/scripts/update_caddyfile.sh \
       /usr/local/sbin/avian-caddy-refresh \
+ && sudo systemctl start php-fpm.service \
  && sudo /usr/local/sbin/avian-caddy-refresh
 import re
 p = '/home/birdnet/BirdNET-Pi/scripts/update_caddyfile.sh'
@@ -251,7 +273,8 @@ RUN sed -i 's|https://en\.wikipedia\.org|https://ru.wikipedia.org|g' \
  && grep -c 'ru.wikipedia.org' /home/birdnet/BirdNET-Pi/avian/api/wiki.php
 
 USER root
-RUN mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
+RUN rm -f /run/php/*.pid /run/php/*.sock \
+    && mv -f /usr/bin/systemctl.real /usr/bin/systemctl \
     && mv -f /usr/bin/timedatectl.real /usr/bin/timedatectl \
     && apt-get update && apt-get install -y --no-install-recommends php-mbstring \
     && apt-get -y upgrade \
