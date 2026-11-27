@@ -197,8 +197,8 @@ open(p, 'w').write(s.replace(old, new))
 print('коллаж: частые птицы больше не обнуляются')
 PY
 # Новая версия apt.js в index.html, иначе браузеры держат старый скрипт из кэша.
-RUN sed -i 's|apt.js?v=r214"|apt.js?v=r214-eu1"|' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
- && grep -q 'apt.js?v=r214-eu1"' /home/birdnet/BirdNET-Pi/avian/frontend/index.html
+RUN sed -i -E 's#(apt[.]js[?]v=[A-Za-z0-9.]+)"#\1-eu1"#' /home/birdnet/BirdNET-Pi/avian/frontend/index.html \
+ && grep -oE 'apt[.]js[?]v=[^"]+-eu1"' /home/birdnet/BirdNET-Pi/avian/frontend/index.html
 
 # Живое аудио апстрим отдаёт только при «прямом локальном» обращении: микрофон
 # слышит разговоры рядом, поэтому наружу поток не выпускается. Проверка — это
